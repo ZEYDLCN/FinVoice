@@ -19,6 +19,13 @@ class ToolCallLogEntry(BaseModel):
 
 
 class HandoffContext(BaseModel):
+    """Mirrors spec §17's handoff block — see agents/handoff.py."""
+
+    customerName: Optional[str] = None
+    intent: Optional[str] = None
+    policyNumber: Optional[str] = None
+    collectedData: dict[str, str] = {}
+    sentiment: str = "Nötr"
     reason: str
     summary: str
 

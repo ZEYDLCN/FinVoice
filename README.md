@@ -38,7 +38,7 @@ Tüm modüller, güvenlik, gözlemlenebilirlik ve iş metrikleri hakkındaki tam
 teknik spesifikasyon için proje geçmişindeki orijinal tasarım dokümanına
 bakılabilir; bu README güncel durumu ve nasıl çalıştırılacağını özetler.
 
-## Durum: Faz 6 tamamlandı ✅
+## Durum: Faz 7 tamamlandı ✅
 
 Proje **fazlara bölünerek** geliştiriliyor — tam plan için **[`ROADMAP.md`](./ROADMAP.md)**.
 
@@ -50,6 +50,7 @@ Proje **fazlara bölünerek** geliştiriliyor — tam plan için **[`ROADMAP.md`
 | 4 | AI Agent Orchestrator (LangGraph + Ollama + Tool Calling) | ✅ |
 | 5 | Text-to-Speech (Piper, torch'suz) | ✅ |
 | 6 | RAG (poliçe dokümanları, FAISS + TF-IDF, torch'suz) | ✅ |
+| 7 | Human Handoff + Conversation Summary | ✅ |
 | 7 | Human handoff + conversation summary | ⏳ |
 | 8 | Observability + business dashboard (Prometheus/Grafana) | ⏳ |
 
@@ -222,6 +223,25 @@ Poliçe/kart dokümanlarını (`rag/documents/*.pdf`) FAISS ile indeksleyip
 ilgili metin parçalarını döner — `backend/`'deki agent bunu
 `search_policy_documents` tool'u ile kullanır. Varsayılan embedding TF-IDF'tir
 (torch/HF indirmesi yok); gerekçe için [`rag/README.md`](./rag/README.md).
+
+## Hızlı Başlangıç (Faz 7 — Human Handoff)
+
+`backend/` çalışırken (yukarıdaki adım), örneğin açık bir temsilci talebi
+gönderin — bu, LLM'e hiç gitmeden deterministik bir guardrail tarafından
+yakalanır:
+
+```bash
+curl -X POST http://localhost:8200/v1/chat -H "Content-Type: application/json" \
+  -d '{"sessionId":"s1","text":"Bir temsilciyle görüşmek istiyorum."}'
+```
+
+Yanıttaki `handoff` alanı spec §17'deki yapılandırılmış dossier'ı taşır
+(müşteri adı, niyet, poliçe, toplanan bilgiler, duygu durumu, özet) —
+bunu üreten ayrı LLM çağrısı başarısız olsa bile (`FINVOICE_AGENT_LLM_BACKEND=fake`
+ile deneyin) handoff'un kendisi engellenmez. Belirsiz niyet ya da tool
+hatası gibi daha yargı gerektiren durumlarda handoff kararı modelin kendi
+`transfer_to_human` çağrısına bırakılır — ayrım için
+[`backend/README.md`](./backend/README.md).
 
 ## Teknoloji Stack (hedef)
 

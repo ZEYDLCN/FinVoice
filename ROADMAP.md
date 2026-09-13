@@ -142,14 +142,29 @@ bağımsız çalışabilen bir FastAPI servisi.
 
 ---
 
-## Faz 7 — Human Handoff + Conversation Summary ⏳
+## Faz 7 — Human Handoff + Conversation Summary ✅
 
 **Hedef:** Agent'ın insana devretmesi gereken durumları yönetmek.
 
-- [ ] Handoff tetikleyicileri (düşük confidence, öfkeli kullanıcı, kritik işlem,
-      tool hatası, fraud şüphesi)
-- [ ] Görüşme özeti üretimi (§17'deki context formatı)
-- [ ] Handoff API'si (mock CRM/temsilci arayüzüne aktarım)
+- [x] Handoff tetikleyicileri — iki katmanlı:
+      - **Deterministik (LLM'e hiç gitmeden)**: açık temsilci talebi, bariz
+        öfke/şikayet — `agents/guardrails.py`, `intake` graph node'u.
+        Garanti davranış + düşük gecikme (spec §20).
+      - **LLM'in kendi kararı**: belirsiz niyet, tool hatası + alternatif
+        yok, dolandırıcılık şüphesi/kritik durum — Faz 4'ten beri var olan
+        `transfer_to_human` tool'u.
+      - ~~Düşük confidence~~ — Faz 4'te olduğu gibi bilinçli olarak
+        eklenmedi (gerçek bir LLM'in confidence skoru üretmesi native değil,
+        bkz. Faz 4 notu).
+- [x] Görüşme özeti üretimi (§17'deki context formatı) — `agents/handoff.py`:
+      handoff anında aynı modelle yapılandırılmış çıktı (`with_structured_output`)
+      alınarak müşteri adı, niyet, poliçe, toplanan bilgiler, duygu durumu ve
+      özet çıkarılıyor; özetleme başarısız olsa bile handoff'un kendisi
+      engellenmiyor (`FINVOICE_AGENT_LLM_BACKEND=fake` ile canlı doğrulandı)
+- [~] Handoff API'si (mock CRM/temsilci arayüzüne aktarım) — ayrı bir mock
+      CRM servisi kurulmadı; dossier `POST /v1/chat`'in `handoff` alanında
+      döner (frontend'in `ToolActivityPanel`'i bunu zaten Faz 2'den beri
+      gösteriyor). Gerçek bir CRM entegrasyonu bu demo'nun kapsamı dışında.
 
 📍 Konum: `backend/agents/`, `backend/api/`
 

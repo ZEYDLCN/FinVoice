@@ -80,6 +80,9 @@ async def test_multi_tool_call_create_claim_flow(mock_enterprise):
 
 
 async def test_transfer_to_human_ends_turn_immediately():
+    """The LLM's own judgment call — a case guardrails.py does NOT catch
+    (no explicit human request, no obvious frustration keyword), so it's
+    the model deciding via `transfer_to_human` that ends the turn."""
     model = ScriptedChatModel(
         responses=[
             AIMessage(
@@ -87,7 +90,7 @@ async def test_transfer_to_human_ends_turn_immediately():
                 tool_calls=[
                     {
                         "name": "transfer_to_human",
-                        "args": {"reason": "Kullanıcı temsilci istedi"},
+                        "args": {"reason": "Dolandırıcılık şüphesi"},
                         "id": "c1",
                     }
                 ],
@@ -102,12 +105,48 @@ async def test_transfer_to_human_ends_turn_immediately():
     handoff_box: dict = {}
 
     await graph.ainvoke(
-        {"messages": [HumanMessage(content="Bir temsilciyle görüşmek istiyorum.")]},
+        {
+            "messages": [
+                HumanMessage(content="Hesabımda tanımadığım işlemler görüyorum, garip bir durum bu.")
+            ]
+        },
         config={"configurable": {"thread_id": "t3", "tool_log": tool_log, "handoff_box": handoff_box}},
     )
 
-    assert handoff_box["reason"] == "Kullanıcı temsilci istedi"
+    assert handoff_box["reason"] == "Dolandırıcılık şüphesi"
     assert tool_log[0]["name"] == "transfer_to_human"
+
+
+async def test_guardrail_intercepts_explicit_human_request_before_llm():
+    """Faz 7: an explicit "get me a human" request never reaches the LLM at
+    all — zero canned responses means the model would raise IndexError if
+    it were called even once."""
+    model = ScriptedChatModel(responses=[])
+    graph = build_graph(model)
+    tool_log: list[dict] = []
+    handoff_box: dict = {}
+
+    result = await graph.ainvoke(
+        {"messages": [HumanMessage(content="Bir temsilciyle görüşmek istiyorum.")]},
+        config={"configurable": {"thread_id": "t6", "tool_log": tool_log, "handoff_box": handoff_box}},
+    )
+
+    assert handoff_box["reason"] == "Kullanıcı açıkça bir müşteri temsilcisiyle görüşmek istedi"
+    assert tool_log == []  # no tool ran — the LLM was never even invoked
+    assert len(result["messages"]) == 1  # just the human message, no AI turn
+
+
+async def test_guardrail_intercepts_frustrated_message_before_llm():
+    model = ScriptedChatModel(responses=[])
+    graph = build_graph(model)
+    handoff_box: dict = {}
+
+    await graph.ainvoke(
+        {"messages": [HumanMessage(content="Bu rezalet bir durum, şikayet edeceğim!")]},
+        config={"configurable": {"thread_id": "t7", "tool_log": [], "handoff_box": handoff_box}},
+    )
+
+    assert handoff_box["reason"] == "Kullanıcının mesajında yoğun memnuniyetsizlik/öfke tespit edildi"
 
 
 async def test_tool_error_is_logged_and_surfaced_to_model(mock_enterprise):

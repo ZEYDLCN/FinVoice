@@ -1,10 +1,15 @@
-"""LangGraph agent orchestrator (Faz 4).
+"""LangGraph agent orchestrator (Faz 4, hard-trigger intake added Faz 7).
 
 Graph shape (see ROADMAP.md §28 for the target diagram this simplifies):
 
-    START -> agent --[has tool_calls?]--> tools --> agent   (loop)
-                   \\-------[no]---------------------------> END
-    tools --[transfer_to_human was called]--------------> END
+    START -> intake --[hard trigger matched?]--> END (handoff, no LLM call)
+                    \\-----------[no]-----------> agent --[has tool_calls?]--> tools --> agent  (loop)
+                                                        \\-------[no]---------------------------> END
+                                          tools --[transfer_to_human was called]-----------> END
+
+`intake` is the Faz 7 guardrail node (see guardrails.py): explicit "get me
+a human" requests and obvious frustration are caught here, deterministically,
+before the LLM is even invoked. Everything else reaches `agent` unchanged.
 
 Unlike the Faz 2 `demoAgent.ts` scripted state machine, there is no
 hand-written "which slot is missing" logic here — the model itself decides
@@ -18,13 +23,14 @@ import time
 from typing import Any, Optional
 
 from langchain_core.language_models.chat_models import BaseChatModel
-from langchain_core.messages import AIMessage, SystemMessage, ToolMessage
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
 from langchain_core.runnables import RunnableConfig
 from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, StateGraph
 from langgraph.graph.message import MessagesState
 
+from backend.agents.guardrails import detect_hard_handoff_trigger
 from backend.agents.prompts import SYSTEM_PROMPT
 from backend.tools.handoff_tools import HANDOFF_TOOL_NAME
 from backend.tools.registry import ALL_TOOLS, TOOLS_BY_NAME
@@ -39,6 +45,16 @@ def build_graph(model: BaseChatModel, checkpointer: Optional[BaseCheckpointSaver
     """Compiles the agent graph, binding `model` (real ChatOllama in
     production, ScriptedChatModel in tests) with the tool registry once."""
     bound_model = model.bind_tools(ALL_TOOLS)
+
+    async def intake_node(state: AgentState, config: RunnableConfig) -> dict:
+        last = state["messages"][-1]
+        if isinstance(last, HumanMessage) and isinstance(last.content, str):
+            reason = detect_hard_handoff_trigger(last.content)
+            if reason is not None:
+                handoff_box = config.get("configurable", {}).get("handoff_box")
+                if handoff_box is not None:
+                    handoff_box["reason"] = reason
+        return {}
 
     async def agent_node(state: AgentState) -> dict:
         messages = state["messages"]
@@ -91,6 +107,12 @@ def build_graph(model: BaseChatModel, checkpointer: Optional[BaseCheckpointSaver
 
         return {"messages": tool_messages}
 
+    def route_after_intake(state: AgentState, config: RunnableConfig) -> str:
+        handoff_box = config.get("configurable", {}).get("handoff_box")
+        if handoff_box and handoff_box.get("reason") is not None:
+            return END
+        return "agent"
+
     def route_after_agent(state: AgentState) -> str:
         last = state["messages"][-1]
         if isinstance(last, AIMessage) and last.tool_calls:
@@ -104,9 +126,11 @@ def build_graph(model: BaseChatModel, checkpointer: Optional[BaseCheckpointSaver
         return "agent"
 
     graph = StateGraph(AgentState)
+    graph.add_node("intake", intake_node)
     graph.add_node("agent", agent_node)
     graph.add_node("tools", tools_node)
-    graph.set_entry_point("agent")
+    graph.set_entry_point("intake")
+    graph.add_conditional_edges("intake", route_after_intake, {"agent": "agent", END: END})
     graph.add_conditional_edges("agent", route_after_agent, {"tools": "tools", END: END})
     graph.add_conditional_edges("tools", route_after_tools, {"agent": "agent", END: END})
     return graph.compile(checkpointer=checkpointer or MemorySaver())

@@ -1,4 +1,4 @@
-# backend — Faz 4: Agent Orchestrator (LangGraph + Ollama)
+# backend — Faz 4-7: Agent Orchestrator, RAG entegrasyonu, Human Handoff
 
 Gerçek bir LLM'in tool-calling yaparak mock-enterprise (Faz 1) API'lerini
 çağırdığı orkestratör. Faz 2'deki `frontend/src/lib/demoAgent.ts` scripted
@@ -10,10 +10,15 @@ frontend'in ileride buna geçişi küçük bir değişiklik olsun.
 POST /v1/chat {sessionId, text}
         │
         ▼
+   intake (Faz 7 guardrail: açık temsilci talebi / öfke -> LLM'e hiç gitmeden handoff)
+        │
+        ▼
    LangGraph: agent ⇄ tools  (LLM tool-calling döngüsü)
         │                │
         │                ├── mock-enterprise API'leri (Faz 1) — yapılandırılmış veri
         │                └── RAG servisi (Faz 6) — poliçe dokümanları, yapılandırılmamış sorular
+        ▼
+   handoff oluştuysa -> generate_handoff_summary() (Faz 7, yapılandırılmış dossier)
         ▼
    {reply, toolCalls, handoff}
 ```
@@ -40,6 +45,22 @@ POST /v1/chat {sessionId, text}
 - **`transfer_to_human` bir tool'dur**, agents/graph.py'de özel olarak ele
   alınır: model bunu çağırdığında graph tekrar modele dönmeden turu bitirir
   (spec §16-17).
+- **Handoff'un bir kısmı LLM'e hiç gitmez** (Faz 7): açık "temsilciyle
+  görüşmek istiyorum" talepleri ve bariz öfke/şikayet, `agents/guardrails.py`
+  içindeki deterministik bir anahtar kelime katmanıyla `intake` node'unda
+  yakalanır — LLM çağrısı yapılmadan direkt handoff'a gider. Bu, davranışın
+  modelin insafına kalmamasını garantiler ve gecikmeyi azaltır (spec §20).
+  Daha yargı gerektiren durumlar (belirsiz niyet, tool hatası, dolandırıcılık
+  şüphesi) hâlâ modelin kendi `transfer_to_human` çağrısına bırakılır —
+  ikisi arasındaki ayrım `guardrails.py`'nin başındaki yorumda açıklanıyor.
+- **Handoff dossier'ı** (Faz 7, spec §17): handoff olduğunda
+  `agents/handoff.py`, aynı modelle (ayrı, tool'suz bir çağrı) görüşmeyi
+  yapılandırılmış bir `HandoffSummary`'ye (müşteri adı, niyet, poliçe,
+  toplanan bilgiler, duygu durumu, özet) dönüştürür —
+  `model.with_structured_output(...)` ile. Bu adım başarısız olursa (ör.
+  `FINVOICE_AGENT_LLM_BACKEND=fake`), handoff yine de gerçekleşir; sadece
+  dossier "Otomatik özet oluşturulamadı" der — bir özetleme hatası asla
+  handoff'un kendisini engellemez.
 - **Session/conversation memory** kendi yazdığımız bir store değil,
   LangGraph'ın `MemorySaver` checkpointer'ı — `thread_id` (= `sessionId`)
   başına otomatik biriktiriliyor. Faz 2/3'teki elle yazılmış
@@ -97,7 +118,9 @@ Bu proje bir agent sandbox'ında geliştirildi ve `ollama.com` /
   human handoff, ve `thread_id` bazlı memory persistence — hepsi gerçek
   kod yolundan geçti (bkz. `tests/test_graph_scripted.py`).
 - ✅ **Gerçek FastAPI servisi** `uvicorn` ile ayağa kaldırıldı ve
-  `FINVOICE_AGENT_LLM_BACKEND=fake` ile canlı `curl` isteğiyle doğrulandı.
+  `FINVOICE_AGENT_LLM_BACKEND=fake` ile canlı `curl` isteğiyle doğrulandı —
+  Faz 7'nin guardrail'i (açık temsilci talebi, öfke tespiti) ve handoff
+  dossier'ının hatasız düşmesi (özetleme başarısız olsa bile) dahil.
 - ❌ **Gerçek Qwen/Ollama çağrısı** bu sandbox'ta doğrulanamadı (ağ engeli).
   Kod doğru ve standart `langchain_ollama.ChatOllama` entegrasyonunu
   kullanıyor; normal bir geliştirme makinesinde/CI'da Ollama kuruluyken
@@ -124,8 +147,10 @@ bakın).
 ```text
 backend/
 ├── agents/
-│   ├── graph.py       # LangGraph StateGraph: agent ⇄ tools döngüsü
-│   └── prompts.py     # sistem promptu
+│   ├── graph.py         # LangGraph StateGraph: intake -> agent ⇄ tools
+│   ├── guardrails.py     # Faz 7: deterministik hard handoff tetikleyicileri
+│   ├── handoff.py         # Faz 7: yapılandırılmış handoff dossier üretimi
+│   └── prompts.py          # sistem promptu
 ├── tools/
 │   ├── mock_client.py     # mock-enterprise'a async HTTP çağrıları
 │   ├── rag_client.py       # RAG servisine (Faz 6) async HTTP çağrıları
@@ -134,14 +159,17 @@ backend/
 │   └── registry.py        # ALL_TOOLS / TOOLS_BY_NAME
 ├── llm/
 │   ├── factory.py     # get_chat_model() — ChatOllama ya da fake
-│   └── fake.py         # ScriptedChatModel (test), StaticReplyChatModel (fake backend)
+│   └── fake.py         # ScriptedChatModel (test, chat + structured output),
+│                         # StaticReplyChatModel (fake backend)
 ├── api/
-│   ├── app.py          # FastAPI: POST /v1/chat
+│   ├── app.py          # FastAPI: POST /v1/chat, AgentRuntime (graph + model)
 │   ├── schemas.py
 │   └── config.py
 └── tests/
-    ├── conftest.py           # respx ile mock-enterprise sahteleme
+    ├── conftest.py           # respx ile mock-enterprise + RAG sahteleme
     ├── test_tools.py
+    ├── test_guardrails.py
+    ├── test_handoff.py
     ├── test_graph_scripted.py
     └── test_api.py
 ```

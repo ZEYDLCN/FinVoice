@@ -14,7 +14,8 @@ from langchain_core.callbacks import CallbackManagerForLLMRun
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import AIMessage, BaseMessage
 from langchain_core.outputs import ChatGeneration, ChatResult
-from pydantic import Field, PrivateAttr
+from langchain_core.runnables import RunnableLambda
+from pydantic import BaseModel, Field, PrivateAttr
 
 
 class ScriptedChatModel(BaseChatModel):
@@ -22,10 +23,17 @@ class ScriptedChatModel(BaseChatModel):
     order. Raises `IndexError` if the script runs out — a test bug (the
     graph called the model more times than expected), not something to
     silently paper over.
+
+    `structured_responses` is the equivalent queue for `.with_structured_output()`
+    calls (used by `agents/handoff.py`'s summary generation) — a separate
+    queue since a real conversation turn can involve several normal chat
+    calls plus, only on handoff, one structured-output call.
     """
 
     responses: list[AIMessage] = Field(default_factory=list)
+    structured_responses: list[BaseModel] = Field(default_factory=list)
     _index: int = PrivateAttr(default=0)
+    _structured_index: int = PrivateAttr(default=0)
 
     def _generate(
         self,
@@ -53,6 +61,19 @@ class ScriptedChatModel(BaseChatModel):
         # return self so `agents.graph.build_graph()` can call it uniformly
         # for both the real and fake model.
         return self
+
+    def with_structured_output(self, schema, **kwargs):
+        def _next(_input):
+            if self._structured_index >= len(self.structured_responses):
+                raise IndexError(
+                    f"ScriptedChatModel ran out of canned structured responses "
+                    f"after {self._structured_index} calls"
+                )
+            result = self.structured_responses[self._structured_index]
+            self._structured_index += 1
+            return result
+
+        return RunnableLambda(_next)
 
 
 class StaticReplyChatModel(BaseChatModel):

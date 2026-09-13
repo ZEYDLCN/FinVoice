@@ -3,12 +3,13 @@ from fastapi.testclient import TestClient
 from langchain_core.messages import AIMessage
 
 from backend.agents.graph import build_graph
-from backend.api.app import app, get_graph
+from backend.api.app import AgentRuntime, app, get_runtime
 from backend.llm.fake import ScriptedChatModel
 
 
-def _client_with_scripted(responses: list[AIMessage]) -> TestClient:
-    app.dependency_overrides[get_graph] = lambda: build_graph(ScriptedChatModel(responses=responses))
+def _client_with_scripted(responses: list[AIMessage], structured_responses=None) -> TestClient:
+    model = ScriptedChatModel(responses=responses, structured_responses=structured_responses or [])
+    app.dependency_overrides[get_runtime] = lambda: AgentRuntime(graph=build_graph(model), model=model)
     return TestClient(app)
 
 
@@ -46,7 +47,17 @@ def test_chat_tool_call_then_reply(mock_enterprise):
     assert body["handoff"] is None
 
 
-def test_chat_handoff(mock_enterprise):
+def test_chat_handoff_via_llm_decision(mock_enterprise):
+    """A handoff reason the guardrail gate does NOT catch — the model
+    decides via `transfer_to_human`."""
+    from backend.agents.handoff import HandoffSummary
+
+    dossier = HandoffSummary(
+        customer_name="Zeyd Alcan",
+        intent="Şüpheli işlem bildirimi",
+        sentiment="Endişeli",
+        summary="Müşteri hesabında tanımadığı işlemler olduğunu bildirdi.",
+    )
     client = _client_with_scripted(
         [
             AIMessage(
@@ -54,15 +65,38 @@ def test_chat_handoff(mock_enterprise):
                 tool_calls=[
                     {
                         "name": "transfer_to_human",
-                        "args": {"reason": "Kullanıcı temsilci istedi"},
+                        "args": {"reason": "Dolandırıcılık şüphesi"},
                         "id": "c1",
                     }
                 ],
             ),
-        ]
+        ],
+        structured_responses=[dossier],
     )
-    resp = client.post("/v1/chat", json={"sessionId": "s2", "text": "Bir temsilciyle görüşmek istiyorum."})
+    resp = client.post(
+        "/v1/chat",
+        json={"sessionId": "s2", "text": "Hesabımda tanımadığım işlemler var, garip bir durum."},
+    )
     assert resp.status_code == 200
     body = resp.json()
-    assert body["handoff"]["reason"] == "Kullanıcı temsilci istedi"
+    assert body["handoff"]["reason"] == "Dolandırıcılık şüphesi"
+    assert body["handoff"]["customerName"] == "Zeyd Alcan"
+    assert body["handoff"]["sentiment"] == "Endişeli"
+    assert "Zeyd Alcan" in body["handoff"]["summary"]
     assert "temsilci" in body["reply"].lower()
+
+
+def test_chat_handoff_via_guardrail_gate(mock_enterprise):
+    """Faz 7: explicit human request is intercepted before the LLM; the
+    handoff summary is still generated from the (short) transcript so far."""
+    client = _client_with_scripted(responses=[])
+    resp = client.post(
+        "/v1/chat", json={"sessionId": "s3", "text": "Bir temsilciyle görüşmek istiyorum."}
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["handoff"]["reason"] == "Kullanıcı açıkça bir müşteri temsilcisiyle görüşmek istedi"
+    assert body["toolCalls"] == []
+    # no structured_responses configured -> generate_handoff_summary falls
+    # back gracefully instead of raising
+    assert body["handoff"]["summary"]
