@@ -38,7 +38,7 @@ Tüm modüller, güvenlik, gözlemlenebilirlik ve iş metrikleri hakkındaki tam
 teknik spesifikasyon için proje geçmişindeki orijinal tasarım dokümanına
 bakılabilir; bu README güncel durumu ve nasıl çalıştırılacağını özetler.
 
-## Durum: Faz 3 tamamlandı ✅
+## Durum: Faz 4 tamamlandı ✅
 
 Proje **fazlara bölünerek** geliştiriliyor — tam plan için **[`ROADMAP.md`](./ROADMAP.md)**.
 
@@ -47,7 +47,7 @@ Proje **fazlara bölünerek** geliştiriliyor — tam plan için **[`ROADMAP.md`
 | 1 | Mock Enterprise API (Customer/Policy/Claims/Card/Support) | ✅ |
 | 2 | Frontend kabuğu (Next.js + mikrofon + transcript/tool activity paneli) | ✅ |
 | 3 | Voice input (Silero VAD + faster-whisper, torch'suz) | ✅ |
-| 4 | AI Agent Orchestrator (LangGraph + Ollama + Tool Calling) | ⏳ |
+| 4 | AI Agent Orchestrator (LangGraph + Ollama + Tool Calling) | ✅ |
 | 5 | Text-to-Speech (Piper/Kokoro) | ⏳ |
 | 6 | RAG (poliçe dokümanları, FAISS) | ⏳ |
 | 7 | Human handoff + conversation summary | ⏳ |
@@ -58,7 +58,7 @@ Proje **fazlara bölünerek** geliştiriliyor — tam plan için **[`ROADMAP.md`
 ```text
 FinVoice/
 ├── mock-enterprise/   # Faz 1 — sahte Customer/Policy/Claims/Card/Support API'leri (FastAPI)
-├── backend/           # Faz 4+ — Agent orchestrator, tools, api
+├── backend/           # Faz 4 (tamamlandı) — LangGraph agent, tools, api
 ├── frontend/          # Faz 2 — Next.js Voice Console (transcript, tool activity, mikrofon)
 ├── voice/             # Faz 3 (VAD+STT, tamamlandı) & Faz 5 (TTS) — bkz. voice/README.md
 ├── rag/               # Faz 6 — embeddings, retriever, documents
@@ -163,6 +163,28 @@ Silero VAD konuşmayı algılar, sessizliği kırpar, ardından faster-whisper
 metne çevirir; yanıt VAD/STT/toplam gecikmeyi de içerir. Torch bağımlılığı
 yoktur — detay ve ortam değişkenleri için
 [`voice/README.md`](./voice/README.md).
+
+## Hızlı Başlangıç (Faz 4 — Agent Orchestrator: LangGraph + Ollama)
+
+```bash
+# Ollama kurulu ve çalışır olmalı: ollama pull qwen2.5:7b && ollama serve
+cd FinVoice
+python -m venv backend/.venv && source backend/.venv/bin/activate
+pip install -r backend/requirements.txt
+MOCK_ENTERPRISE_URL=http://localhost:8000 uvicorn backend.api.app:app --reload --port 8200
+```
+
+```bash
+curl -X POST http://localhost:8200/v1/chat \
+  -H "Content-Type: application/json" \
+  -d '{"sessionId":"s1","text":"Arabamla kaza yaptım, hasar dosyası açtırmak istiyorum."}'
+```
+
+Bu, Faz 2'deki scripted `demoAgent.ts`'in yerini alacak **gerçek** LangGraph
+tool-calling agent'ıdır — aynı `{reply, toolCalls, handoff}` sözleşmesini
+kullanır. Ollama kurulu değilse `FINVOICE_AGENT_LLM_BACKEND=fake` ile
+API'yi (gerçek muhakeme olmadan) yine de ayağa kaldırıp test edebilirsiniz —
+detay için [`backend/README.md`](./backend/README.md).
 
 ## Teknoloji Stack (hedef)
 

@@ -65,20 +65,32 @@ bağımsız çalışabilen bir FastAPI servisi.
 
 ---
 
-## Faz 4 — AI Agent Orchestrator + Tool Calling ⏳
+## Faz 4 — AI Agent Orchestrator + Tool Calling ✅
 
 **Hedef:** Projenin kalbi — niyet anlama, eksik bilgi toplama, tool seçme/çağırma.
 
-- [ ] LangGraph state machine (§8, §28'deki graph)
-- [ ] Ollama + Qwen ile lokal LLM entegrasyonu
-- [ ] Tool katmanı: `get_customer`, `get_policy`, `check_policy_coverage`,
+- [x] LangGraph state machine (§8, §28'deki graph — `agent ⇄ tools` döngüsü,
+      `transfer_to_human` özel çıkış yolu ile)
+- [x] Ollama + Qwen ile lokal LLM entegrasyonu (`langchain-ollama` ile,
+      torch bağımlılığı yok) — kod tamamlandı, `ScriptedChatModel` ile
+      uçtan uca test edildi; gerçek Qwen çağrısı bu sandbox'ta doğrulanamadı
+      çünkü ortamın ağ politikası `ollama.com`'u engelliyor (Faz 3'teki
+      `huggingface.co` engeliyle aynı kategori) — bkz. `backend/README.md`
+- [x] Tool katmanı: `get_customer`, `get_policy`, `check_policy_coverage`,
       `create_claim`, `get_claim_status`, `freeze_card`, `request_new_card`,
-      `create_support_ticket`, `transfer_to_human` (mock-enterprise API'lerini
-      sarmalayan Python fonksiyonları)
-- [ ] Conversation state / memory yönetimi
-- [ ] Confidence skoru ve eksik alan tespiti
+      `create_support_ticket`, `transfer_to_human` + bonus `get_cards`
+      (mock-enterprise API'lerini sarmalayan async Python fonksiyonları)
+- [x] Conversation state / memory yönetimi — kendi yazdığımız bir store
+      değil, LangGraph'ın `MemorySaver` checkpointer'ı (`thread_id` = session)
+- [~] Confidence skoru ve eksik alan tespiti — **bilinçli olarak
+      farklı çözüldü**: gerçek bir LLM'in "eksik alan" listesi çıkarıp
+      hardcoded bir confidence sayısı üretmesi yerine, model eksik bilgiyi
+      doğal dilde soru sorarak kendi ele alıyor (bu, Faz 2'nin scripted
+      state machine'inin yapamadığı, gerçek reasoning'in asıl faydası).
+      Sayısal bir confidence skoru Ollama'nın chat API'sinden native olarak
+      gelmiyor; eklenmedi.
 
-📍 Konum: `backend/agents/`, `backend/tools/`
+📍 Konum: `backend/`
 
 ---
 

@@ -37,11 +37,35 @@ services:
       # tutar, her container yeniden başlatıldığında yeniden indirmez.
       - voice-model-cache:/root/.cache/huggingface
 
+  ollama:
+    image: ollama/ollama:latest
+    container_name: finvoice-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-models:/root/.ollama
+    # İlk çalıştırmada modeli çekmeniz gerekir:
+    #   docker compose exec ollama ollama pull qwen2.5:7b
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: finvoice-backend
+    environment:
+      MOCK_ENTERPRISE_URL: http://mock-enterprise:8000
+      FINVOICE_AGENT_OLLAMA_HOST: http://ollama:11434
+      FINVOICE_AGENT_AGENT_MODEL: qwen2.5:7b
+    ports:
+      - "8200:8200"
+    depends_on:
+      - mock-enterprise
+      - ollama
+
 volumes:
   voice-model-cache:
+  ollama-models:
 
-# Faz 4+ ile birlikte eklenecek servisler (bkz. ROADMAP.md):
-#   backend         -> LangGraph agent orchestrator (Faz 4)
-#   postgres, redis -> kalıcı state (Faz 4+)
-#   ollama          -> lokal LLM (Faz 4)
+# Faz 5+ ile birlikte eklenecek servisler (bkz. ROADMAP.md):
+#   postgres, redis -> kalıcı state
 #   prometheus, grafana -> observability (Faz 8)
