@@ -28,3 +28,9 @@ def test_search_respects_top_k(client):
     resp = client.post("/v1/search", json={"query": "poliçe kart hasar", "topK": 1})
     assert resp.status_code == 200
     assert len(resp.json()["results"]) == 1
+
+
+def test_metrics_endpoint(client):
+    resp = client.get("/metrics")
+    assert resp.status_code == 200
+    assert "http_requests_total" in resp.text

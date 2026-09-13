@@ -78,10 +78,32 @@ services:
       - rag
       - ollama
 
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: finvoice-prometheus
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: finvoice-grafana
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+      GF_AUTH_DISABLE_LOGIN_FORM: "true"
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    ports:
+      - "3001:3000"
+    depends_on:
+      - prometheus
+
 volumes:
   voice-model-cache:
   ollama-models:
 
-# Faz 7+ ile birlikte eklenecek servisler (bkz. ROADMAP.md):
+# Faz 9+ (ROADMAP.md'nin ötesi, "V2 Özellikleri"):
 #   postgres, redis -> kalıcı state
-#   prometheus, grafana -> observability (Faz 8)

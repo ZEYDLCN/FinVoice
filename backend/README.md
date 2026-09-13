@@ -1,4 +1,4 @@
-# backend — Faz 4-7: Agent Orchestrator, RAG entegrasyonu, Human Handoff
+# backend — Faz 4-8: Agent Orchestrator, RAG, Human Handoff, Observability
 
 Gerçek bir LLM'in tool-calling yaparak mock-enterprise (Faz 1) API'lerini
 çağırdığı orkestratör. Faz 2'deki `frontend/src/lib/demoAgent.ts` scripted
@@ -126,6 +126,20 @@ Bu proje bir agent sandbox'ında geliştirildi ve `ollama.com` /
   kullanıyor; normal bir geliştirme makinesinde/CI'da Ollama kuruluyken
   çalışması beklenir.
 
+## Observability (Faz 8)
+
+`GET /metrics`, `finvoice_chat_turns_total`, `finvoice_tool_calls_total`,
+`finvoice_handoff_total` ve `finvoice_active_sessions`'ı Prometheus
+formatında sunar (bkz. `observability/metrics.py` ve kök
+`monitoring/README.md`). Her tool çağrısı `agents/graph.py`'de gerçek bir
+OpenTelemetry span'i olarak kaydedilir (`observability/tracing.py`) —
+varsayılan olarak konsola basılır, `OTEL_EXPORTER_OTLP_ENDPOINT` ile gerçek
+bir collector'a (Jaeger, Tempo) yönlendirilebilir.
+
+Bu servisin gerçek Prometheus'a scrape edildiği ve dashboard'daki tüm
+PromQL sorgularının gerçek veriyle doğru sonuç döndürdüğü bu sandbox'ta
+canlı olarak doğrulandı — detay için `monitoring/README.md`.
+
 ## Testler
 
 ```bash
@@ -161,8 +175,11 @@ backend/
 │   ├── factory.py     # get_chat_model() — ChatOllama ya da fake
 │   └── fake.py         # ScriptedChatModel (test, chat + structured output),
 │                         # StaticReplyChatModel (fake backend)
+├── observability/
+│   ├── metrics.py      # Faz 8: Prometheus Counter/Histogram/Gauge'lar
+│   └── tracing.py       # Faz 8: OpenTelemetry TracerProvider + get_tracer()
 ├── api/
-│   ├── app.py          # FastAPI: POST /v1/chat, AgentRuntime (graph + model)
+│   ├── app.py          # FastAPI: POST /v1/chat, GET /metrics, AgentRuntime
 │   ├── schemas.py
 │   └── config.py
 └── tests/
@@ -171,6 +188,8 @@ backend/
     ├── test_guardrails.py
     ├── test_handoff.py
     ├── test_graph_scripted.py
+    ├── test_tracing.py        # InMemorySpanExporter ile gerçek span testleri
+    ├── test_metrics.py
     └── test_api.py
 ```
 

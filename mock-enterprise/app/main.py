@@ -1,5 +1,6 @@
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
+from prometheus_fastapi_instrumentator import Instrumentator
 
 from app.api import cards, claims, customers, health, policies, support
 from app.core.config import get_settings
@@ -16,6 +17,9 @@ app = FastAPI(
         "Voice AI platform — see ROADMAP.md for the full phase plan."
     ),
 )
+
+# Faz 8: generic HTTP request metrics at GET /metrics.
+Instrumentator().instrument(app).expose(app)
 
 
 @app.exception_handler(NotFoundError)

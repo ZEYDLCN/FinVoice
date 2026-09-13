@@ -32,6 +32,7 @@ from langgraph.graph.message import MessagesState
 
 from backend.agents.guardrails import detect_hard_handoff_trigger
 from backend.agents.prompts import SYSTEM_PROMPT
+from backend.observability.tracing import get_tracer
 from backend.tools.handoff_tools import HANDOFF_TOOL_NAME
 from backend.tools.registry import ALL_TOOLS, TOOLS_BY_NAME
 
@@ -72,18 +73,23 @@ def build_graph(model: BaseChatModel, checkpointer: Optional[BaseCheckpointSaver
         tool_messages: list[ToolMessage] = []
         for call in last.tool_calls:
             tool = TOOLS_BY_NAME.get(call["name"])
-            start = time.perf_counter()
-            error: Optional[str] = None
-            try:
-                if tool is None:
-                    raise KeyError(f"Bilinmeyen tool: {call['name']}")
-                result = await tool.ainvoke(call["args"])
-                status = "success"
-            except Exception as exc:  # noqa: BLE001 - surfaced to the LLM as a tool result
-                result = {"error": str(exc)}
-                status = "error"
-                error = str(exc)
-            duration_ms = round((time.perf_counter() - start) * 1000)
+            with get_tracer().start_as_current_span(f"tool.{call['name']}") as span:
+                span.set_attribute("tool.name", call["name"])
+                start = time.perf_counter()
+                error: Optional[str] = None
+                try:
+                    if tool is None:
+                        raise KeyError(f"Bilinmeyen tool: {call['name']}")
+                    result = await tool.ainvoke(call["args"])
+                    status = "success"
+                except Exception as exc:  # noqa: BLE001 - surfaced to the LLM as a tool result
+                    result = {"error": str(exc)}
+                    status = "error"
+                    error = str(exc)
+                    span.record_exception(exc)
+                duration_ms = round((time.perf_counter() - start) * 1000)
+                span.set_attribute("tool.status", status)
+                span.set_attribute("tool.duration_ms", duration_ms)
 
             if tool_log is not None:
                 tool_log.append(

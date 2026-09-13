@@ -170,18 +170,47 @@ bağımsız çalışabilen bir FastAPI servisi.
 
 ---
 
-## Faz 8 — Observability + Business Dashboard ⏳
+## Faz 8 — Observability + Business Dashboard ✅
 
 **Hedef:** Teknik ve iş metriklerinin izlenmesi.
 
-- [ ] OpenTelemetry trace/span enstrümantasyonu (`trace_id`, `session_id`, ...)
-- [ ] Prometheus metrik export (latency, tool success/error rate, session count)
-- [ ] Grafana dashboard (teknik metrikler + iş metrikleri: automation rate,
-      handoff rate, ortalama görüşme süresi)
+- [x] OpenTelemetry trace/span enstrümantasyonu — her tool çağrısı için
+      gerçek bir span (`tool.<isim>`, `session_id`, `tool.status`,
+      `tool.duration_ms`), `InMemorySpanExporter` ile gerçek testlerle
+      doğrulandı (`backend/observability/tracing.py`)
+- [x] Prometheus metrik export — tüm 4 Python servisinde (`mock-enterprise`,
+      `voice`, `backend`, `rag`) genel HTTP metrikleri
+      (`prometheus-fastapi-instrumentator`) + `backend`/`voice`'ta özel iş
+      metrikleri (chat turu, tool success/error rate, handoff rate, session
+      count, VAD/STT/TTS latency)
+- [x] Grafana dashboard (teknik + iş metrikleri: automation rate, handoff
+      rate) — `monitoring/grafana/dashboards/finvoice-ops.json`, 10 panel.
+      **Gerçek Prometheus'a karşı canlı doğrulandı**: 4 servis gerçek
+      süreçler olarak çalıştırıldı, gerçek trafik gönderildi, gerçek
+      Prometheus (GitHub release'inden) bunları scrape etti, ve
+      dashboard'daki HER PromQL sorgusu Prometheus'un API'sine karşı
+      çalıştırılıp doğru sonuç verdiği kanıtlandı (ör. 7 turdan 2 handoff →
+      automation rate gerçekten %71.43 döndü). Grafana'nın kendisi bu
+      sandbox'ta render edilemedi — hem Docker Hub hem grafana.com bu
+      ortamda engelli (Faz 3-4'teki huggingface.co/ollama.com engeliyle
+      aynı kategori); detay ve gerekçe `monitoring/README.md`'de.
 
-📍 Konum: `monitoring/`
+📍 Konum: `monitoring/`, `backend/observability/`, `voice/service/metrics.py`
 
 ---
+
+## Faz 1-8 tamamlandı ✅
+
+FinVoice Ops'un ana spesifikasyonundaki (bkz. kök `README.md`) 8 fazın
+tamamı bağımsız olarak çalışır ve test edilmiş durumda: mock kurumsal
+API'ler, sesli/metin arayüz, VAD+STT, LangGraph agent + tool calling, TTS,
+RAG, human handoff ve observability. Her fazın README'sinde hangi kısmın bu
+geliştirme sandbox'ının ağ kısıtlamaları yüzünden (huggingface.co,
+ollama.com, Docker Hub, grafana.com) doğrulanamadığı — ve neyin gerçekten,
+canlı olarak doğrulandığı — açıkça belirtildi. Eksik olan tek şey, ayrı ayrı
+çalışan bu parçaları uçtan uca bağlayan orkestrasyon kablolaması (bkz.
+`voice/README.md`'deki "Frontend / Agent entegrasyonu" notu) — bu, bir
+sonraki mantıklı adım.
 
 ## V2 (Faz sonrası) ⏳
 

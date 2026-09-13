@@ -38,9 +38,9 @@ Tüm modüller, güvenlik, gözlemlenebilirlik ve iş metrikleri hakkındaki tam
 teknik spesifikasyon için proje geçmişindeki orijinal tasarım dokümanına
 bakılabilir; bu README güncel durumu ve nasıl çalıştırılacağını özetler.
 
-## Durum: Faz 7 tamamlandı ✅
+## Durum: Faz 1-8'in tamamı tamamlandı ✅
 
-Proje **fazlara bölünerek** geliştiriliyor — tam plan için **[`ROADMAP.md`](./ROADMAP.md)**.
+Proje **fazlara bölünerek** geliştirildi — tam plan için **[`ROADMAP.md`](./ROADMAP.md)**.
 
 | Faz | Kapsam | Durum |
 |-----|--------|-------|
@@ -51,6 +51,11 @@ Proje **fazlara bölünerek** geliştiriliyor — tam plan için **[`ROADMAP.md`
 | 5 | Text-to-Speech (Piper, torch'suz) | ✅ |
 | 6 | RAG (poliçe dokümanları, FAISS + TF-IDF, torch'suz) | ✅ |
 | 7 | Human Handoff + Conversation Summary | ✅ |
+| 8 | Observability (Prometheus + Grafana + OpenTelemetry) | ✅ |
+
+Her fazın bağımsız olarak çalıştığı gerçek testlerle (ve çoğu fazda canlı,
+çalışan servislerle) doğrulandı. Eksik olan tek şey, bu parçaları uçtan uca
+bağlayan orkestrasyon kablolaması — bkz. `ROADMAP.md`'nin sonundaki not.
 | 7 | Human handoff + conversation summary | ⏳ |
 | 8 | Observability + business dashboard (Prometheus/Grafana) | ⏳ |
 
@@ -63,7 +68,7 @@ FinVoice/
 ├── frontend/          # Faz 2 — Next.js Voice Console (transcript, tool activity, mikrofon)
 ├── voice/             # Faz 3 (VAD+STT, tamamlandı) & Faz 5 (TTS) — bkz. voice/README.md
 ├── rag/               # Faz 6 (tamamlandı) — PDF ingestion, TF-IDF+FAISS retrieval
-├── monitoring/        # Faz 8 — Prometheus, Grafana
+├── monitoring/        # Faz 8 (tamamlandı) — Prometheus config + Grafana dashboard-as-code
 ├── docker/            # Servis-özel Docker dosyaları
 ├── docker-compose.yml
 └── ROADMAP.md
@@ -242,6 +247,29 @@ ile deneyin) handoff'un kendisi engellenmez. Belirsiz niyet ya da tool
 hatası gibi daha yargı gerektiren durumlarda handoff kararı modelin kendi
 `transfer_to_human` çağrısına bırakılır — ayrım için
 [`backend/README.md`](./backend/README.md).
+
+## Hızlı Başlangıç (Faz 8 — Observability)
+
+Her servis kendi `/metrics`'ini Prometheus formatında sunar:
+
+```bash
+curl http://localhost:8200/metrics   # backend
+curl http://localhost:8100/metrics   # voice
+curl http://localhost:8300/metrics   # rag
+curl http://localhost:8000/metrics   # mock-enterprise
+```
+
+Docker ile Prometheus + Grafana:
+
+```bash
+docker compose up -d prometheus grafana
+```
+
+Grafana: http://localhost:3001 — `monitoring/grafana/dashboards/finvoice-ops.json`
+otomatik yüklenir (automation rate, handoff rate, tool call latency, VAD/STT/TTS
+latency dahil 10 panel). Bu dashboard'un tüm sorguları gerçek Prometheus'a
+karşı canlı doğrulandı — detay ve bu sandbox'ta Grafana'nın neden
+render edilemediği için [`monitoring/README.md`](./monitoring/README.md).
 
 ## Teknoloji Stack (hedef)
 

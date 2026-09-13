@@ -59,3 +59,10 @@ def test_synthesize(client):
 
     with wave.open(BytesIO(resp.content)) as wav_file:
         assert wav_file.getnchannels() == 1
+
+
+def test_metrics_endpoint_exposes_voice_latency_histograms(client, silence_wav):
+    client.post("/v1/transcribe", files={"file": ("silence.wav", silence_wav, "audio/wav")})
+    resp = client.get("/metrics")
+    assert resp.status_code == 200
+    assert "finvoice_voice_vad_latency_seconds" in resp.text

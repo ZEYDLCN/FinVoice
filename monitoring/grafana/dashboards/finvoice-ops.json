@@ -1,0 +1,208 @@
+{
+  "title": "FinVoice Ops",
+  "uid": "finvoice-ops",
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": true,
+  "refresh": "10s",
+  "time": { "from": "now-1h", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Toplam Chat Turu",
+      "gridPos": { "h": 6, "w": 6, "x": 0, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "targets": [
+        { "expr": "sum(finvoice_chat_turns_total)", "refId": "A", "datasource": { "type": "prometheus", "uid": "Prometheus" } }
+      ],
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] }
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Automation Rate",
+      "gridPos": { "h": 6, "w": 6, "x": 6, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "targets": [
+        {
+          "expr": "100 * (1 - (sum(finvoice_handoff_total) or vector(0)) / clamp_min(sum(finvoice_chat_turns_total), 1))",
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "Prometheus" }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "yellow", "value": 60 },
+              { "color": "green", "value": 80 }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Human Handoff Rate",
+      "gridPos": { "h": 6, "w": 6, "x": 12, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "targets": [
+        {
+          "expr": "100 * (sum(finvoice_handoff_total) or vector(0)) / clamp_min(sum(finvoice_chat_turns_total), 1)",
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "Prometheus" }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 20 },
+              { "color": "red", "value": 40 }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Aktif Session Sayısı",
+      "gridPos": { "h": 6, "w": 6, "x": 18, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "targets": [
+        { "expr": "finvoice_active_sessions", "refId": "A", "datasource": { "type": "prometheus", "uid": "Prometheus" } }
+      ],
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] }
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Chat Turn Latency (p50 / p95)",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 6 },
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.5, sum(rate(finvoice_chat_latency_seconds_bucket[5m])) by (le))",
+          "legendFormat": "p50",
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "Prometheus" }
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(finvoice_chat_latency_seconds_bucket[5m])) by (le))",
+          "legendFormat": "p95",
+          "refId": "B",
+          "datasource": { "type": "prometheus", "uid": "Prometheus" }
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] }
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "Voice Pipeline Latency (ortalama)",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 6 },
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "targets": [
+        {
+          "expr": "rate(finvoice_voice_vad_latency_seconds_sum[5m]) / clamp_min(rate(finvoice_voice_vad_latency_seconds_count[5m]), 1e-9)",
+          "legendFormat": "VAD",
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "Prometheus" }
+        },
+        {
+          "expr": "rate(finvoice_voice_stt_latency_seconds_sum[5m]) / clamp_min(rate(finvoice_voice_stt_latency_seconds_count[5m]), 1e-9)",
+          "legendFormat": "STT",
+          "refId": "B",
+          "datasource": { "type": "prometheus", "uid": "Prometheus" }
+        },
+        {
+          "expr": "rate(finvoice_voice_tts_latency_seconds_sum[5m]) / clamp_min(rate(finvoice_voice_tts_latency_seconds_count[5m]), 1e-9)",
+          "legendFormat": "TTS",
+          "refId": "C",
+          "datasource": { "type": "prometheus", "uid": "Prometheus" }
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] }
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "Tool Call Rate (tool, status)",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 14 },
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "targets": [
+        {
+          "expr": "sum(rate(finvoice_tool_calls_total[5m])) by (tool, status)",
+          "legendFormat": "{{tool}} ({{status}})",
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "Prometheus" }
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] }
+    },
+    {
+      "id": 8,
+      "type": "timeseries",
+      "title": "Tool Call Duration (ortalama, tool başına)",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 14 },
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "targets": [
+        {
+          "expr": "rate(finvoice_tool_call_duration_seconds_sum[5m]) / clamp_min(rate(finvoice_tool_call_duration_seconds_count[5m]), 1e-9)",
+          "legendFormat": "{{tool}}",
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "Prometheus" }
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] }
+    },
+    {
+      "id": 9,
+      "type": "timeseries",
+      "title": "HTTP İstek Oranı (servis başına)",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 22 },
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "targets": [
+        {
+          "expr": "sum(rate(http_requests_total[5m])) by (job)",
+          "legendFormat": "{{job}}",
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "Prometheus" }
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] }
+    },
+    {
+      "id": 10,
+      "type": "piechart",
+      "title": "Handoff Tetikleyici Dağılımı",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 22 },
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "targets": [
+        {
+          "expr": "sum(finvoice_handoff_total) by (trigger)",
+          "legendFormat": "{{trigger}}",
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "Prometheus" }
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] }
+    }
+  ]
+}

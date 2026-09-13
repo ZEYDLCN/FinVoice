@@ -11,6 +11,7 @@ from __future__ import annotations
 from functools import lru_cache
 
 from fastapi import Depends, FastAPI
+from prometheus_fastapi_instrumentator import Instrumentator
 from pydantic import BaseModel
 
 from rag.embeddings.base import Embedder
@@ -19,9 +20,11 @@ from rag.service.config import Settings, get_settings
 
 app = FastAPI(
     title="FinVoice Ops — RAG Service",
-    version="0.1.0",
-    description="PDF ingestion + FAISS retrieval over policy/product documents (Faz 6).",
+    version="0.2.0",
+    description="PDF ingestion + FAISS retrieval over policy/product documents (Faz 6), instrumented (Faz 8).",
 )
+
+Instrumentator().instrument(app).expose(app)
 
 
 class SearchRequest(BaseModel):

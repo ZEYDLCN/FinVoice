@@ -18,10 +18,17 @@ from functools import lru_cache
 
 from fastapi import Depends, FastAPI, File, UploadFile
 from fastapi.responses import Response
+from prometheus_fastapi_instrumentator import Instrumentator
 from pydantic import BaseModel
 
 from voice.audio_utils import load_audio_mono16k
 from voice.service.config import Settings, get_settings
+from voice.service.metrics import (
+    STT_LATENCY_SECONDS,
+    TRANSCRIPTIONS_TOTAL,
+    TTS_LATENCY_SECONDS,
+    VAD_LATENCY_SECONDS,
+)
 from voice.stt.transcriber import FakeTranscriber, FasterWhisperTranscriber, Transcriber
 from voice.tts.synthesizer import FakeSynthesizer, PiperSynthesizer, Synthesizer
 from voice.vad.segmenter import get_speech_timestamps
@@ -29,9 +36,11 @@ from voice.vad.silero import SileroVadModel
 
 app = FastAPI(
     title="FinVoice Ops — Voice Gateway",
-    version="0.2.0",
-    description="Silero VAD + faster-whisper STT (Faz 3) + Piper TTS (Faz 5).",
+    version="0.3.0",
+    description="Silero VAD + faster-whisper STT (Faz 3) + Piper TTS (Faz 5), instrumented (Faz 8).",
 )
+
+Instrumentator().instrument(app).expose(app)
 
 
 class SynthesizeRequest(BaseModel):
@@ -86,8 +95,10 @@ async def transcribe(
         speech_pad_ms=settings.vad_speech_pad_ms,
     )
     vad_latency_ms = round((time.perf_counter() - vad_start) * 1000)
+    VAD_LATENCY_SECONDS.observe(vad_latency_ms / 1000)
 
     if not segments:
+        TRANSCRIPTIONS_TOTAL.labels(speech_detected="false").inc()
         return {
             "text": "",
             "language": None,
@@ -105,6 +116,8 @@ async def transcribe(
     stt_start = time.perf_counter()
     result = transcriber.transcribe(trimmed)
     stt_latency_ms = round((time.perf_counter() - stt_start) * 1000)
+    STT_LATENCY_SECONDS.observe(stt_latency_ms / 1000)
+    TRANSCRIPTIONS_TOTAL.labels(speech_detected="true").inc()
 
     return {
         "text": result.text,
@@ -123,6 +136,7 @@ async def synthesize(
     start = time.perf_counter()
     result = synthesizer.synthesize(req.text)
     latency_ms = round((time.perf_counter() - start) * 1000)
+    TTS_LATENCY_SECONDS.observe(latency_ms / 1000)
 
     return Response(
         content=result.audio_wav,
