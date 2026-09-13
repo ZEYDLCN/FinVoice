@@ -38,7 +38,7 @@ Tüm modüller, güvenlik, gözlemlenebilirlik ve iş metrikleri hakkındaki tam
 teknik spesifikasyon için proje geçmişindeki orijinal tasarım dokümanına
 bakılabilir; bu README güncel durumu ve nasıl çalıştırılacağını özetler.
 
-## Durum: Faz 2 tamamlandı ✅
+## Durum: Faz 3 tamamlandı ✅
 
 Proje **fazlara bölünerek** geliştiriliyor — tam plan için **[`ROADMAP.md`](./ROADMAP.md)**.
 
@@ -46,7 +46,7 @@ Proje **fazlara bölünerek** geliştiriliyor — tam plan için **[`ROADMAP.md`
 |-----|--------|-------|
 | 1 | Mock Enterprise API (Customer/Policy/Claims/Card/Support) | ✅ |
 | 2 | Frontend kabuğu (Next.js + mikrofon + transcript/tool activity paneli) | ✅ |
-| 3 | Voice input (Silero VAD + faster-whisper) | ⏳ |
+| 3 | Voice input (Silero VAD + faster-whisper, torch'suz) | ✅ |
 | 4 | AI Agent Orchestrator (LangGraph + Ollama + Tool Calling) | ⏳ |
 | 5 | Text-to-Speech (Piper/Kokoro) | ⏳ |
 | 6 | RAG (poliçe dokümanları, FAISS) | ⏳ |
@@ -60,7 +60,7 @@ FinVoice/
 ├── mock-enterprise/   # Faz 1 — sahte Customer/Policy/Claims/Card/Support API'leri (FastAPI)
 ├── backend/           # Faz 4+ — Agent orchestrator, tools, api
 ├── frontend/          # Faz 2 — Next.js Voice Console (transcript, tool activity, mikrofon)
-├── voice/             # Faz 3 & 5 — VAD, STT, TTS
+├── voice/             # Faz 3 (VAD+STT, tamamlandı) & Faz 5 (TTS) — bkz. voice/README.md
 ├── rag/               # Faz 6 — embeddings, retriever, documents
 ├── monitoring/        # Faz 8 — Prometheus, Grafana
 ├── docker/            # Servis-özel Docker dosyaları
@@ -145,6 +145,24 @@ tarih/konum soruları → `CLM-98221` dosya numarası).
 Bu fazdaki agent, gerçek bir LLM değil; Faz 4'te LangGraph ile değişecek
 basit bir "scripted demo agent"dır — detay için
 [`frontend/README.md`](./frontend/README.md).
+
+## Hızlı Başlangıç (Faz 3 — Voice Gateway: VAD + STT)
+
+```bash
+cd FinVoice   # repo kökü
+python -m venv voice/.venv && source voice/.venv/bin/activate
+pip install -r voice/requirements.txt
+uvicorn voice.service.app:app --reload --port 8100
+```
+
+```bash
+curl -X POST http://localhost:8100/v1/transcribe -F "file=@ornek.wav"
+```
+
+Silero VAD konuşmayı algılar, sessizliği kırpar, ardından faster-whisper
+metne çevirir; yanıt VAD/STT/toplam gecikmeyi de içerir. Torch bağımlılığı
+yoktur — detay ve ortam değişkenleri için
+[`voice/README.md`](./voice/README.md).
 
 ## Teknoloji Stack (hedef)
 

@@ -45,16 +45,23 @@ bağımsız çalışabilen bir FastAPI servisi.
 
 ---
 
-## Faz 3 — Voice Input (VAD + STT) ⏳
+## Faz 3 — Voice Input (VAD + STT) ✅
 
 **Hedef:** Kullanıcı sesini metne çeviren pipeline.
 
-- [ ] Silero VAD entegrasyonu (konuşma başlangıcı/bitişi tespiti)
-- [ ] faster-whisper ile STT servisi (lokal, self-hosted)
-- [ ] Audio chunk → WAV → transcript uçtan uca akışı
-- [ ] Latency ölçümü (STT latency metriği)
+- [x] Silero VAD entegrasyonu (konuşma başlangıcı/bitişi tespiti) — torch
+      bağımlılığı olmadan, saf onnxruntime ile (bkz. `voice/README.md`)
+- [x] faster-whisper ile STT servisi (lokal, self-hosted, CTranslate2 — torch yok)
+- [x] Herhangi bir formatı (wav/webm/ogg/...) 16kHz mono'ya çeviren `audio_utils.py`
+- [x] FastAPI servisi: `POST /v1/transcribe` — VAD ile sessizliği kırpıp yalnızca
+      konuşma varsa STT çalıştırıyor
+- [x] Latency ölçümü (`vadLatencyMs`, `sttLatencyMs`, `totalLatencyMs`)
+- [x] Gerçek Silero VAD ile test edildi (espeak-ng ile üretilmiş sentetik
+      konuşma + sessizlik fixture'ları); gerçek faster-whisper testi
+      (`-m slow`) internet erişimi gerektirdiği için ortama göre çalışır —
+      bkz. `voice/README.md`
 
-📍 Konum: `voice/vad/`, `voice/stt/`
+📍 Konum: `voice/`
 
 ---
 

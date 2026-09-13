@@ -22,7 +22,25 @@ services:
     depends_on:
       - mock-enterprise
 
-# Faz 3+ ile birlikte eklenecek servisler (bkz. ROADMAP.md):
+  voice:
+    build:
+      context: .
+      dockerfile: voice/Dockerfile
+    container_name: finvoice-voice
+    environment:
+      FINVOICE_VOICE_STT_BACKEND: faster-whisper
+      FINVOICE_VOICE_WHISPER_MODEL: tiny
+    ports:
+      - "8100:8100"
+    volumes:
+      # faster-whisper'ın Hugging Face Hub'dan indirdiği modeli önbellekte
+      # tutar, her container yeniden başlatıldığında yeniden indirmez.
+      - voice-model-cache:/root/.cache/huggingface
+
+volumes:
+  voice-model-cache:
+
+# Faz 4+ ile birlikte eklenecek servisler (bkz. ROADMAP.md):
 #   backend         -> LangGraph agent orchestrator (Faz 4)
 #   postgres, redis -> kalıcı state (Faz 4+)
 #   ollama          -> lokal LLM (Faz 4)
