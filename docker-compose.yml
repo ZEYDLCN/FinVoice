@@ -30,12 +30,18 @@ services:
     environment:
       FINVOICE_VOICE_STT_BACKEND: faster-whisper
       FINVOICE_VOICE_WHISPER_MODEL: tiny
+      # Bir Piper ses modeli indirip aşağıdaki volume'a koyana kadar "fake"
+      # (sessiz WAV) kalır — bkz. voice/tts/models/README.md. Gerçek TTS
+      # için: FINVOICE_VOICE_TTS_BACKEND=piper yapın ve modeli
+      # ./voice/tts/models/'e indirin.
+      FINVOICE_VOICE_TTS_BACKEND: fake
     ports:
       - "8100:8100"
     volumes:
       # faster-whisper'ın Hugging Face Hub'dan indirdiği modeli önbellekte
       # tutar, her container yeniden başlatıldığında yeniden indirmez.
       - voice-model-cache:/root/.cache/huggingface
+      - ./voice/tts/models:/app/voice/tts/models
 
   ollama:
     image: ollama/ollama:latest
@@ -66,6 +72,6 @@ volumes:
   voice-model-cache:
   ollama-models:
 
-# Faz 5+ ile birlikte eklenecek servisler (bkz. ROADMAP.md):
+# Faz 6+ ile birlikte eklenecek servisler (bkz. ROADMAP.md):
 #   postgres, redis -> kalıcı state
 #   prometheus, grafana -> observability (Faz 8)

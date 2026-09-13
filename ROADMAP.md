@@ -94,13 +94,23 @@ bağımsız çalışabilen bir FastAPI servisi.
 
 ---
 
-## Faz 5 — Text-to-Speech ⏳
+## Faz 5 — Text-to-Speech ✅
 
 **Hedef:** Agent cevabını sese çevirip kullanıcıya geri oynatma.
 
-- [ ] Piper ve/veya Kokoro TTS entegrasyonu
-- [ ] TTS latency ölçümü
-- [ ] Uçtan uca ses döngüsü: Mic → VAD → STT → Agent → TTS → Speaker
+- [x] Piper TTS entegrasyonu (torch'suz — kendi espeak-ng phonemizer'ı ve
+      onnxruntime vocoder'ıyla). Kokoro eklenmedi; Piper'ın bu sandbox'ta
+      gerçekten indirilip çalıştırılabilir olması (Hugging Face'in aksine
+      GitHub release'leri erişilebilirdi) net bir kazanım sağladı —
+      detay ve gerekçe için `voice/README.md`
+- [x] TTS latency ölçümü (`X-TTS-Latency-Ms`, `X-TTS-Duration-S` header'ları)
+- [x] `POST /v1/synthesize` gerçek bir ses modeliyle uçtan uca test edildi —
+      bu sandbox'ta canlı bir sunucu üzerinden gerçek İngilizce konuşma
+      üretildi ve doğrulandı (Faz 3/4'ün aksine burada indirme engellenmedi)
+- [ ] ~~Uçtan uca ses döngüsü: Mic → VAD → STT → Agent → TTS → Speaker~~ —
+      her bir halka (Faz 1-5) ayrı ayrı çalışır ve test edilmiş durumda;
+      bunları birbirine bağlayan orkestrasyon kablolaması henüz yapılmadı
+      (bkz. `voice/README.md` "Frontend / Agent entegrasyonu")
 
 📍 Konum: `voice/tts/`
 

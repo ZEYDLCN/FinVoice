@@ -1,15 +1,20 @@
-# voice — Faz 3: VAD + STT
+# voice — Faz 3 (VAD + STT) & Faz 5 (TTS)
 
-Ses işleme boru hattı: konuşma algılama (Silero VAD) → sessizliği kırpma →
-metne çevirme (faster-whisper). `frontend/`'in Faz 2'deki mikrofon
-göstergesinden farklı olarak burası **gerçek** transcript üreten servistir.
+Ses giriş/çıkış boru hattı: konuşma algılama (Silero VAD) → sessizliği
+kırpma → metne çevirme (faster-whisper) ve tersi yönde, metni sese çevirme
+(Piper). `frontend/`'in Faz 2'deki mikrofon göstergesinden farklı olarak
+burası **gerçek** transcript ve **gerçek** ses üreten servistir.
 
 ```text
+STT yönü:
 audio (wav/webm/ogg/...) → 16kHz mono PCM → Silero VAD → speech segments
                                                               │
                                               en baştaki/sondaki sessizlik kırpılır
                                                               ▼
                                                      faster-whisper → transcript
+
+TTS yönü:
+text → Piper → WAV audio
 ```
 
 ## Neden torch yok?
@@ -25,8 +30,10 @@ modelini çalıştırmak için. Bunun yerine:
   `numpy` ile yeniden yazan bir port (kaynak: snakers4/silero-vad, MIT).
   `voice/vad/silero.py`'nin başındaki yorum tam I/O şemasını belgeler.
 
-`faster-whisper` zaten CTranslate2 tabanlı olduğu için torch gerektirmiyor —
-bu sayede tüm `voice/` servisi torch'suz, hafif bir kurulumla çalışıyor.
+`faster-whisper` zaten CTranslate2 tabanlı olduğu için torch gerektirmiyor,
+`piper-tts` de kendi espeak-ng phonemizer'ını ve onnxruntime tabanlı
+vocoder'ını bir arada getiriyor (yine torch yok) — bu sayede tüm `voice/`
+servisi torch'suz, hafif bir kurulumla çalışıyor.
 
 ## Çalıştırma
 
@@ -59,6 +66,29 @@ curl -X POST http://localhost:8100/v1/transcribe -F "file=@ornek.wav"
 Konuşma algılanmazsa (`vadSegments: []`) STT hiç çalıştırılmaz — boşuna
 inference maliyeti ödenmez (bkz. ana spesifikasyon §6).
 
+Metni sese çevirme:
+
+```bash
+curl -X POST http://localhost:8100/v1/synthesize \
+  -H "Content-Type: application/json" \
+  -d '{"text":"Hasar kaydınız oluşturuldu. Dosya numaranız CLM-98221."}' \
+  -o cevap.wav
+```
+
+Yanıt gövdesi doğrudan `audio/wav`'dır; latency ve üretilen sesin süresi
+header'larda döner: `X-TTS-Latency-Ms`, `X-TTS-Duration-S`.
+
+## Piper ses modeli hakkında
+
+`piper-tts`'in resmi indirici aracı (`python -m piper.download_voices`)
+modelleri Hugging Face Hub'dan çeker — `FINVOICE_VOICE_STT_BACKEND` ile
+aynı kısıtlamaya tabi (bkz. aşağı). Bu nedenle ses modeli de repoya vendor
+edilmedi (tek bir ses için bile onlarca MB). Kurulum ve alternatif indirme
+yolu (bu sandbox'ta gerçekten doğrulanmış GitHub release URL'i dahil) için
+[`voice/tts/models/README.md`](./tts/models/README.md)'ye bakın.
+`FINVOICE_VOICE_TTS_BACKEND=fake` ile model olmadan da API'yi ayağa
+kaldırabilirsiniz (sessiz bir WAV döner).
+
 ## Whisper modeli hakkında
 
 `faster-whisper`, ilk kullanımda seçilen modeli (`FINVOICE_VOICE_WHISPER_MODEL`,
@@ -81,6 +111,8 @@ sözleşmesi) test etmeye devam eder.
 | `VAD_MIN_SPEECH_DURATION_MS` | `250` | bundan kısa segmentler atılır |
 | `VAD_MIN_SILENCE_DURATION_MS` | `100` | segment sonu için beklenecek sessizlik |
 | `VAD_SPEECH_PAD_MS` | `30` | segment kenarlarına eklenen pay |
+| `TTS_BACKEND` | `piper` | `fake` → model yüklemeden sessiz WAV (test/CI) |
+| `PIPER_VOICE_PATH` | `voice/tts/models/en-us-lessac-low.onnx` | `.onnx` ses model dosyasının yolu |
 
 ## Testler
 
@@ -92,11 +124,19 @@ pytest voice/ -m slow         # + gerçek faster-whisper indirir ve çalıştır
 ```
 
 Varsayılan (`slow` hariç) paket **hiçbir model indirmeden** çalışır: Silero
-VAD ağırlığı repo içinde vendor edilmiş, STT tarafı `FakeTranscriber` ile
-test edilir. `-m slow` paketi gerçek `faster-whisper` transcription'ını
-`tests/fixtures/sample_en.wav` (espeak-ng ile üretilmiş sentetik İngilizce
-konuşma) üzerinde doğrular ve metinde "policy"/"active" kelimelerinin
-geçtiğini kontrol eder — internet erişimi (Hugging Face Hub) gerektirir.
+VAD ağırlığı repo içinde vendor edilmiş, STT tarafı `FakeTranscriber`, TTS
+tarafı `FakeSynthesizer` ile test edilir. `-m slow` paketi:
+
+- gerçek `faster-whisper` transcription'ını `tests/fixtures/sample_en.wav`
+  (espeak-ng ile üretilmiş sentetik İngilizce konuşma) üzerinde doğrular ve
+  metinde "policy"/"active" kelimelerinin geçtiğini kontrol eder — Hugging
+  Face Hub erişimi gerektirir.
+- gerçek Piper sentezlemesini doğrular: bir ses modelini (bkz. yukarı) ilk
+  seferde indirip `voice/.piper_cache/` altında önbelleğe alır, sonra
+  gerçek sesin sessiz olmadığını (`max amplitude > 1000`) kontrol eder —
+  GitHub erişimi gerektirir. **Bu testler bu projenin geliştirildiği
+  sandbox'ta gerçekten çalıştırılıp geçti** (Hugging Face'in aksine
+  GitHub release indirmeleri bu ortamda engellenmemişti).
 
 ## Docker
 
@@ -122,22 +162,40 @@ voice/
 │   └── segmenter.py    # get_speech_timestamps() — konuşma segmenti çıkarma
 ├── stt/
 │   └── transcriber.py  # FasterWhisperTranscriber + FakeTranscriber
+├── tts/
+│   ├── models/
+│   │   └── README.md    # ses modeli indirme talimatları (vendor edilmedi)
+│   └── synthesizer.py    # PiperSynthesizer + FakeSynthesizer
 ├── service/
-│   ├── app.py           # FastAPI: POST /v1/transcribe
+│   ├── app.py           # FastAPI: POST /v1/transcribe, POST /v1/synthesize
 │   └── config.py
 └── tests/
     ├── fixtures/         # sample_en.wav (espeak-ng), silence.wav
+    ├── conftest.py        # piper_voice_path fixture (GitHub'dan indirir+önbelleğe alır)
     ├── test_audio_utils.py
     ├── test_silero_vad.py
     ├── test_transcriber_fake.py
     ├── test_transcriber_real.py   # @pytest.mark.slow
+    ├── test_synthesizer_fake.py
+    ├── test_synthesizer_real.py   # @pytest.mark.slow
     ├── test_service.py
     └── test_service_real.py       # @pytest.mark.slow
 ```
 
-## Frontend entegrasyonu (sıradaki adım)
+## Frontend / Agent entegrasyonu (sıradaki adım)
 
-Bu servis şu an bağımsız çalışıyor; Faz 2'deki `useMicrophone` hook'u henüz
-buraya bağlı değil (yalnızca ses seviyesi ölçüyor). Faz 4'te LangGraph agent
-ile birlikte, frontend'in kaydettiği ses (MediaRecorder → webm/opus) bu
-servise gönderilip dönen transcript agent'a girdi olarak verilecek.
+Bu servis şu an bağımsız çalışıyor. Faz 2'deki `useMicrophone` hook'u henüz
+buraya bağlı değil (yalnızca ses seviyesi ölçüyor) ve `backend/`'deki Faz 4
+agent'ı henüz bu servisi çağırmıyor. Kalan kablolama:
+
+1. Frontend: mikrofonun kaydettiği ses (MediaRecorder → webm/opus) buraya
+   `POST /v1/transcribe` ile gönderilip dönen `text`, `backend/`'in
+   `POST /v1/chat`'ine iletilecek.
+2. `backend/`'in döndürdüğü `reply` metni buraya `POST /v1/synthesize` ile
+   gönderilip dönen WAV, frontend'de oynatılacak.
+
+Bu, ROADMAP.md'nin mimari diyagramındaki tam döngüyü (Mic → VAD → STT →
+Agent → TTS → Speaker) kapatan son kablolama adımıdır — Faz 1-5'in her biri
+bağımsız olarak çalışır ve test edilmiş durumda; eksik olan yalnızca
+bunları birbirine bağlayan orkestrasyon (frontend tarafında, ya da ayrı bir
+"realtime gateway" katmanında).

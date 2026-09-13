@@ -20,3 +20,8 @@ dist/
 
 # Docker
 docker-compose.override.yml
+
+# Downloaded model weights (fetched on demand, not committed)
+voice/.piper_cache/
+voice/tts/models/*.onnx
+voice/tts/models/*.onnx.json

@@ -38,7 +38,7 @@ Tüm modüller, güvenlik, gözlemlenebilirlik ve iş metrikleri hakkındaki tam
 teknik spesifikasyon için proje geçmişindeki orijinal tasarım dokümanına
 bakılabilir; bu README güncel durumu ve nasıl çalıştırılacağını özetler.
 
-## Durum: Faz 4 tamamlandı ✅
+## Durum: Faz 5 tamamlandı ✅
 
 Proje **fazlara bölünerek** geliştiriliyor — tam plan için **[`ROADMAP.md`](./ROADMAP.md)**.
 
@@ -48,7 +48,7 @@ Proje **fazlara bölünerek** geliştiriliyor — tam plan için **[`ROADMAP.md`
 | 2 | Frontend kabuğu (Next.js + mikrofon + transcript/tool activity paneli) | ✅ |
 | 3 | Voice input (Silero VAD + faster-whisper, torch'suz) | ✅ |
 | 4 | AI Agent Orchestrator (LangGraph + Ollama + Tool Calling) | ✅ |
-| 5 | Text-to-Speech (Piper/Kokoro) | ⏳ |
+| 5 | Text-to-Speech (Piper, torch'suz) | ✅ |
 | 6 | RAG (poliçe dokümanları, FAISS) | ⏳ |
 | 7 | Human handoff + conversation summary | ⏳ |
 | 8 | Observability + business dashboard (Prometheus/Grafana) | ⏳ |
@@ -185,6 +185,23 @@ tool-calling agent'ıdır — aynı `{reply, toolCalls, handoff}` sözleşmesini
 kullanır. Ollama kurulu değilse `FINVOICE_AGENT_LLM_BACKEND=fake` ile
 API'yi (gerçek muhakeme olmadan) yine de ayağa kaldırıp test edebilirsiniz —
 detay için [`backend/README.md`](./backend/README.md).
+
+## Hızlı Başlangıç (Faz 5 — Text-to-Speech)
+
+`voice/` servisi zaten çalışıyorsa (Faz 3 bölümüne bakın), aynı servis
+artık `/v1/synthesize`'ı da sunuyor:
+
+```bash
+curl -X POST http://localhost:8100/v1/synthesize \
+  -H "Content-Type: application/json" \
+  -d '{"text":"Hasar kaydınız oluşturuldu. Dosya numaranız CLM-98221."}' \
+  -o cevap.wav
+```
+
+Piper ile gerçek, self-hosted (torch'suz) ses üretimi. Bir ses modeli
+indirmediyseniz `FINVOICE_VOICE_TTS_BACKEND=fake` ile sessiz bir WAV
+döner — model indirme talimatları için
+[`voice/tts/models/README.md`](./voice/tts/models/README.md).
 
 ## Teknoloji Stack (hedef)
 

@@ -17,6 +17,11 @@ class Settings(BaseSettings):
     vad_min_silence_duration_ms: int = 100
     vad_speech_pad_ms: int = 30
 
+    # "fake" avoids loading a real Piper voice model — used by default in
+    # tests/CI. Set to "piper" + a real piper_voice_path for real TTS.
+    tts_backend: str = "piper"
+    piper_voice_path: str = "voice/tts/models/en-us-lessac-low.onnx"
+
 
 @lru_cache
 def get_settings() -> Settings:
