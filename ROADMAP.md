@@ -116,14 +116,27 @@ bağımsız çalışabilen bir FastAPI servisi.
 
 ---
 
-## Faz 6 — RAG (Kurumsal Doküman Arama) ⏳
+## Faz 6 — RAG (Kurumsal Doküman Arama) ✅
 
 **Hedef:** Yapılandırılmamış bilgi (poliçe şartları, SSS) için retrieval.
 
-- [ ] PDF ingestion + chunking pipeline
-- [ ] Sentence-Transformers embedding
-- [ ] FAISS vector store (alternatif: pgvector)
-- [ ] Retriever + Agent entegrasyonu (yalnızca kurumsal bilgi sorularında devreye girer)
+- [x] PDF ingestion + chunking pipeline (başlık/soru tabanlı sezgisel chunker)
+- [~] Embedding: **Sentence-Transformers yerine karakter n-gram TF-IDF**
+      (bilinçli karar — torch ve Hugging Face indirmesi gerektirmiyor,
+      Türkçe eklemeli yapıya n-gram'larla stemmer'sız çözüm; gerekçe için
+      `rag/README.md`). Sentence-Transformers de gerçek, çalışan opsiyonel
+      bir backend olarak mevcut (`FINVOICE_RAG_EMBEDDING_BACKEND=sentence-transformers`).
+- [x] FAISS vector store (gerçek FAISS, pgvector'a gerek kalmadı — bu
+      ölçekte flat index yeterli)
+- [x] Retriever + Agent entegrasyonu: `search_policy_documents` tool'u
+      backend/'in Faz 4 agent'ına eklendi; agent basit teminat sorularında
+      `check_policy_coverage`'ı, sözleşme metni gerektiren sorularda RAG'i
+      kullanacak şekilde yönlendirildi (spec §13-15)
+- [x] Uçtan uca gerçek test: 3 örnek PDF (kasko, kart, SSS — sentetik ama
+      gerçek Türkçe içerikli) gerçek şekilde indekslendi ve gerçek Türkçe
+      sorgularla doğrulandı — **bu fazın testleri hiçbir sahte/fake
+      gerektirmiyor**, tamamı gerçek kod yolundan geçiyor (Faz 3-5'in
+      aksine model indirme engeli yok)
 
 📍 Konum: `rag/`
 

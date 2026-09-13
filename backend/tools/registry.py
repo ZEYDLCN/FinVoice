@@ -3,12 +3,14 @@ from .claims_tools import create_claim, get_claim_status
 from .customer_tools import get_customer
 from .handoff_tools import transfer_to_human
 from .policy_tools import check_policy_coverage, get_policy
+from .rag_tools import search_policy_documents
 from .support_tools import create_support_ticket
 
 ALL_TOOLS = [
     get_customer,
     get_policy,
     check_policy_coverage,
+    search_policy_documents,
     create_claim,
     get_claim_status,
     get_cards,

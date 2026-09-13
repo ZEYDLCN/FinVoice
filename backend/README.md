@@ -12,7 +12,8 @@ POST /v1/chat {sessionId, text}
         ▼
    LangGraph: agent ⇄ tools  (LLM tool-calling döngüsü)
         │                │
-        │                └── mock-enterprise API'leri (Faz 1)
+        │                ├── mock-enterprise API'leri (Faz 1) — yapılandırılmış veri
+        │                └── RAG servisi (Faz 6) — poliçe dokümanları, yapılandırılmamış sorular
         ▼
    {reply, toolCalls, handoff}
 ```
@@ -127,8 +128,9 @@ backend/
 │   └── prompts.py     # sistem promptu
 ├── tools/
 │   ├── mock_client.py     # mock-enterprise'a async HTTP çağrıları
+│   ├── rag_client.py       # RAG servisine (Faz 6) async HTTP çağrıları
 │   ├── customer_tools.py, policy_tools.py, claims_tools.py,
-│   │   card_tools.py, support_tools.py, handoff_tools.py
+│   │   card_tools.py, support_tools.py, handoff_tools.py, rag_tools.py
 │   └── registry.py        # ALL_TOOLS / TOOLS_BY_NAME
 ├── llm/
 │   ├── factory.py     # get_chat_model() — ChatOllama ya da fake
@@ -149,6 +151,7 @@ backend/
 | Değişken | Varsayılan | Açıklama |
 |----------|------------|----------|
 | `MOCK_ENTERPRISE_URL` | `http://localhost:8000` | Faz 1 API adresi |
+| `RAG_SERVICE_URL` | `http://localhost:8300` | Faz 6 RAG servisi adresi |
 | `FINVOICE_AGENT_LLM_BACKEND` | `ollama` | `fake` → Ollama olmadan smoke-test |
 | `FINVOICE_AGENT_OLLAMA_HOST` | `http://localhost:11434` | Ollama sunucu adresi |
 | `FINVOICE_AGENT_AGENT_MODEL` | `qwen2.5:7b` | Ollama model adı |

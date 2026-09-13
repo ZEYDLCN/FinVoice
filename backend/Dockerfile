@@ -8,6 +8,7 @@ RUN pip install --no-cache-dir -r backend/requirements.txt
 COPY backend ./backend
 
 ENV MOCK_ENTERPRISE_URL=http://mock-enterprise:8000
+ENV RAG_SERVICE_URL=http://rag:8300
 ENV FINVOICE_AGENT_OLLAMA_HOST=http://ollama:11434
 ENV FINVOICE_AGENT_AGENT_MODEL=qwen2.5:7b
 

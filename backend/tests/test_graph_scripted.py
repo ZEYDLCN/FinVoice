@@ -155,3 +155,35 @@ async def test_memory_persists_across_turns_for_same_thread():
     )
 
     assert len(result["messages"]) == 4  # 2 human + 2 ai, both turns
+
+
+async def test_rag_tool_call_for_unstructured_policy_question(mock_rag):
+    """Scenario from spec §13: a question the structured mock-enterprise API
+    can't answer (İkame araç kaç gün sağlanır?) goes to RAG instead."""
+    model = ScriptedChatModel(
+        responses=[
+            AIMessage(
+                content="",
+                tool_calls=[
+                    {
+                        "name": "search_policy_documents",
+                        "args": {"query": "İkame araç kaç gün sağlanır?"},
+                        "id": "c1",
+                    }
+                ],
+            ),
+            AIMessage(content="İkame araç hizmeti en fazla 15 gün sağlanır."),
+        ]
+    )
+    graph = build_graph(model)
+    tool_log: list[dict] = []
+
+    result = await graph.ainvoke(
+        {"messages": [HumanMessage(content="İkame araç kaç gün sağlanır?")]},
+        config={"configurable": {"thread_id": "t5", "tool_log": tool_log, "handoff_box": {}}},
+    )
+
+    assert tool_log[0]["name"] == "search_policy_documents"
+    assert tool_log[0]["status"] == "success"
+    assert "kasko_sartlari.pdf" in str(tool_log[0]["output"])
+    assert "15 gün" in result["messages"][-1].content

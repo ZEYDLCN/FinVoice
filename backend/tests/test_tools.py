@@ -3,6 +3,7 @@ import pytest
 from backend.tools.claims_tools import create_claim
 from backend.tools.policy_tools import get_policy
 from backend.tools.mock_client import MockEnterpriseError
+from backend.tools.rag_tools import search_policy_documents
 
 
 async def test_get_policy_active(mock_enterprise):
@@ -27,3 +28,11 @@ async def test_create_claim(mock_enterprise):
     )
     assert result["claimId"] == "CLM-98221"
     assert result["status"] == "OPEN"
+
+
+async def test_search_policy_documents(mock_rag):
+    results = await search_policy_documents.ainvoke(
+        {"query": "İkame araç kaç gün sağlanır?"}
+    )
+    assert results
+    assert results[0]["source"] == "kasko_sartlari.pdf"

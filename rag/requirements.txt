@@ -1,0 +1,17 @@
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
+pydantic==2.9.2
+pydantic-settings==2.5.2
+numpy==2.1.1
+scikit-learn==1.5.2
+faiss-cpu==1.9.0
+pypdf==5.0.1
+httpx==0.27.2
+pytest==8.3.3
+
+# Only needed to regenerate rag/documents/*.pdf (see documents/generate_sample_docs.py)
+fpdf2==2.8.8
+
+# Only needed for the optional sentence-transformers embedding backend
+# (FINVOICE_RAG_EMBEDDING_BACKEND=sentence-transformers) — pulls in torch.
+# sentence-transformers==3.2.1

@@ -38,7 +38,7 @@ Tüm modüller, güvenlik, gözlemlenebilirlik ve iş metrikleri hakkındaki tam
 teknik spesifikasyon için proje geçmişindeki orijinal tasarım dokümanına
 bakılabilir; bu README güncel durumu ve nasıl çalıştırılacağını özetler.
 
-## Durum: Faz 5 tamamlandı ✅
+## Durum: Faz 6 tamamlandı ✅
 
 Proje **fazlara bölünerek** geliştiriliyor — tam plan için **[`ROADMAP.md`](./ROADMAP.md)**.
 
@@ -49,7 +49,7 @@ Proje **fazlara bölünerek** geliştiriliyor — tam plan için **[`ROADMAP.md`
 | 3 | Voice input (Silero VAD + faster-whisper, torch'suz) | ✅ |
 | 4 | AI Agent Orchestrator (LangGraph + Ollama + Tool Calling) | ✅ |
 | 5 | Text-to-Speech (Piper, torch'suz) | ✅ |
-| 6 | RAG (poliçe dokümanları, FAISS) | ⏳ |
+| 6 | RAG (poliçe dokümanları, FAISS + TF-IDF, torch'suz) | ✅ |
 | 7 | Human handoff + conversation summary | ⏳ |
 | 8 | Observability + business dashboard (Prometheus/Grafana) | ⏳ |
 
@@ -61,7 +61,7 @@ FinVoice/
 ├── backend/           # Faz 4 (tamamlandı) — LangGraph agent, tools, api
 ├── frontend/          # Faz 2 — Next.js Voice Console (transcript, tool activity, mikrofon)
 ├── voice/             # Faz 3 (VAD+STT, tamamlandı) & Faz 5 (TTS) — bkz. voice/README.md
-├── rag/               # Faz 6 — embeddings, retriever, documents
+├── rag/               # Faz 6 (tamamlandı) — PDF ingestion, TF-IDF+FAISS retrieval
 ├── monitoring/        # Faz 8 — Prometheus, Grafana
 ├── docker/            # Servis-özel Docker dosyaları
 ├── docker-compose.yml
@@ -202,6 +202,26 @@ Piper ile gerçek, self-hosted (torch'suz) ses üretimi. Bir ses modeli
 indirmediyseniz `FINVOICE_VOICE_TTS_BACKEND=fake` ile sessiz bir WAV
 döner — model indirme talimatları için
 [`voice/tts/models/README.md`](./voice/tts/models/README.md).
+
+## Hızlı Başlangıç (Faz 6 — RAG: Kurumsal Doküman Arama)
+
+```bash
+cd FinVoice
+python -m venv rag/.venv && source rag/.venv/bin/activate
+pip install -r rag/requirements.txt
+uvicorn rag.service.app:app --reload --port 8300
+```
+
+```bash
+curl -X POST http://localhost:8300/v1/search \
+  -H "Content-Type: application/json" \
+  -d '{"query":"İkame araç kaç gün sağlanır?"}'
+```
+
+Poliçe/kart dokümanlarını (`rag/documents/*.pdf`) FAISS ile indeksleyip
+ilgili metin parçalarını döner — `backend/`'deki agent bunu
+`search_policy_documents` tool'u ile kullanır. Varsayılan embedding TF-IDF'tir
+(torch/HF indirmesi yok); gerekçe için [`rag/README.md`](./rag/README.md).
 
 ## Teknoloji Stack (hedef)
 

@@ -41,3 +41,26 @@ def mock_enterprise():
         )
         router.post("/api/claims").mock(return_value=Response(201, json=CLAIM_CREATED))
         yield router
+
+
+RAG_BASE = "http://localhost:8300"
+
+RAG_SEARCH_RESULTS = [
+    {
+        "text": (
+            "2. İkame Araç Hizmeti Onarım süresi 7 günü aşan hasar "
+            "dosyalarında sigortalıya ikame araç sağlanır; en fazla 15 gün."
+        ),
+        "source": "kasko_sartlari.pdf",
+        "score": 0.42,
+    }
+]
+
+
+@pytest.fixture
+def mock_rag():
+    with respx.mock(base_url=RAG_BASE, assert_all_called=False) as router:
+        router.post("/v1/search").mock(
+            return_value=Response(200, json={"results": RAG_SEARCH_RESULTS})
+        )
+        yield router
