@@ -38,14 +38,14 @@ Tüm modüller, güvenlik, gözlemlenebilirlik ve iş metrikleri hakkındaki tam
 teknik spesifikasyon için proje geçmişindeki orijinal tasarım dokümanına
 bakılabilir; bu README güncel durumu ve nasıl çalıştırılacağını özetler.
 
-## Durum: Faz 1 tamamlandı ✅
+## Durum: Faz 2 tamamlandı ✅
 
 Proje **fazlara bölünerek** geliştiriliyor — tam plan için **[`ROADMAP.md`](./ROADMAP.md)**.
 
 | Faz | Kapsam | Durum |
 |-----|--------|-------|
 | 1 | Mock Enterprise API (Customer/Policy/Claims/Card/Support) | ✅ |
-| 2 | Frontend kabuğu (Next.js + WebRTC + transcript paneli) | ⏳ |
+| 2 | Frontend kabuğu (Next.js + mikrofon + transcript/tool activity paneli) | ✅ |
 | 3 | Voice input (Silero VAD + faster-whisper) | ⏳ |
 | 4 | AI Agent Orchestrator (LangGraph + Ollama + Tool Calling) | ⏳ |
 | 5 | Text-to-Speech (Piper/Kokoro) | ⏳ |
@@ -59,7 +59,7 @@ Proje **fazlara bölünerek** geliştiriliyor — tam plan için **[`ROADMAP.md`
 FinVoice/
 ├── mock-enterprise/   # Faz 1 — sahte Customer/Policy/Claims/Card/Support API'leri (FastAPI)
 ├── backend/           # Faz 4+ — Agent orchestrator, tools, api
-├── frontend/          # Faz 2 — Next.js Voice UI
+├── frontend/          # Faz 2 — Next.js Voice Console (transcript, tool activity, mikrofon)
 ├── voice/             # Faz 3 & 5 — VAD, STT, TTS
 ├── rag/               # Faz 6 — embeddings, retriever, documents
 ├── monitoring/        # Faz 8 — Prometheus, Grafana
@@ -124,6 +124,27 @@ cd mock-enterprise && pytest
 ```
 
 Detaylı endpoint listesi için [`mock-enterprise/README.md`](./mock-enterprise/README.md).
+
+## Hızlı Başlangıç (Faz 2 — Voice Console)
+
+`mock-enterprise` çalışırken (yukarıdaki adım), başka bir terminalde:
+
+```bash
+cd frontend
+npm install
+cp .env.example .env.local
+npm run dev
+```
+
+http://localhost:3000 adresinde transcript paneli, tool activity paneli ve
+mikrofon göstergesini içeren konsolu açın; örnek komutlardan birine tıklayıp
+gerçek mock-enterprise API çağrılarının uçtan uca çalıştığını görün (ör.
+"Arabamla kaza yaptım, hasar dosyası açtırmak istiyorum." → poliçe kontrolü →
+tarih/konum soruları → `CLM-98221` dosya numarası).
+
+Bu fazdaki agent, gerçek bir LLM değil; Faz 4'te LangGraph ile değişecek
+basit bir "scripted demo agent"dır — detay için
+[`frontend/README.md`](./frontend/README.md).
 
 ## Teknoloji Stack (hedef)
 

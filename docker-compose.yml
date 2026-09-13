@@ -11,9 +11,19 @@ services:
       timeout: 3s
       retries: 5
 
-# Faz 2+ ile birlikte eklenecek servisler (bkz. ROADMAP.md):
+  frontend:
+    build:
+      context: ./frontend
+    container_name: finvoice-frontend
+    environment:
+      MOCK_ENTERPRISE_URL: http://mock-enterprise:8000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - mock-enterprise
+
+# Faz 3+ ile birlikte eklenecek servisler (bkz. ROADMAP.md):
 #   backend         -> LangGraph agent orchestrator (Faz 4)
-#   frontend        -> Next.js voice UI (Faz 2)
 #   postgres, redis -> kalıcı state (Faz 4+)
 #   ollama          -> lokal LLM (Faz 4)
 #   prometheus, grafana -> observability (Faz 8)

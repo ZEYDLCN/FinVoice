@@ -28,17 +28,18 @@ bağımsız çalışabilen bir FastAPI servisi.
 
 ---
 
-## Faz 2 — Frontend Kabuğu ⏳
+## Faz 2 — Frontend Kabuğu ✅
 
 **Hedef:** Sesli görüşmeyi ve agent aktivitesini izleyebileceğimiz temel arayüz.
 
-- [ ] Next.js + TypeScript + Tailwind iskeleti
-- [ ] Mikrofon erişimi (getUserMedia)
-- [ ] WebRTC bağlantı iskeleti (LiveKit ya da düz WebRTC)
-- [ ] Real-time transcript paneli (bkz. spesifikasyon §18)
-- [ ] Tool Activity paneli (bkz. §19)
-- [ ] Mock-enterprise API'lerini çağıran basit "text-mode" demo (ses olmadan,
-      agent gelmeden önce API'lerin çalıştığını göstermek için)
+- [x] Next.js + TypeScript + Tailwind iskeleti
+- [x] Mikrofon erişimi (getUserMedia) + ses seviyesi göstergesi (`useMicrophone`)
+- [x] Real-time transcript paneli (bkz. spesifikasyon §18)
+- [x] Tool Activity paneli (intent, tool call log, latency, handoff context — §19)
+- [x] Mock-enterprise API'lerini çağıran "text-mode" demo agent (`demoAgent.ts`) —
+      5 senaryo: hasar açma, hasar durumu, teminat sorgusu, kayıp kart, human handoff
+- [ ] ~~WebRTC bağlantı iskeleti~~ — bilerek ertelendi, bkz. `frontend/README.md`
+      ("neden gerçek bir RTCPeerConnection yok"); Faz 3'te STT hazır olunca eklenecek.
 
 📍 Konum: `frontend/`
 
