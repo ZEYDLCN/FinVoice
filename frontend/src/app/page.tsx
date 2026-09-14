@@ -1,133 +1,184 @@
 "use client";
 
-import { useState } from "react";
-import { ChatConsole } from "@/components/ChatConsole";
-import { MicVisualizer } from "@/components/MicVisualizer";
-import { ToolActivityPanel } from "@/components/ToolActivityPanel";
-import { TranscriptPanel } from "@/components/TranscriptPanel";
-import type {
-  AgentTurnResponse,
-  HandoffContext,
-  Intent,
-  ToolCallLogEntry,
-  TranscriptMessage,
-} from "@/lib/types";
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import {
+  ArrowRight,
+  CheckCircle2,
+  FileText,
+  Mic,
+  SlidersHorizontal,
+  Workflow,
+} from "lucide-react";
+import { PageBody, PageHeader } from "@/components/layout/PageHeader";
+import { Card, CardHeader } from "@/components/ui/Card";
+import { Badge } from "@/components/ui/Badge";
+import { StatTile } from "@/components/ui/StatTile";
+import type { ServiceStatus } from "@/app/api/status/route";
 
-const SESSION_STORAGE_KEY = "finvoice.sessionId";
-
-/**
- * Lazily reads (or creates) the session id from localStorage. Only ever
- * called from client event handlers, never during render/SSR, so there is
- * no hydration-mismatch or "setState in effect" concern to work around.
- */
-function getSessionId(): string {
-  try {
-    let id = localStorage.getItem(SESSION_STORAGE_KEY);
-    if (!id) {
-      id = crypto.randomUUID();
-      localStorage.setItem(SESSION_STORAGE_KEY, id);
-    }
-    return id;
-  } catch {
-    return crypto.randomUUID();
-  }
+interface MetricsSummary {
+  business: {
+    chatTurns: number;
+    activeSessions: number;
+    automationRatePct: number | null;
+    handoffRatePct: number | null;
+  } | null;
 }
 
-function uiMessage(role: TranscriptMessage["role"], text: string): TranscriptMessage {
-  return { id: crypto.randomUUID(), role, text, timestamp: new Date().toISOString() };
-}
+const PHASES = [
+  "Mock Enterprise API",
+  "Voice Console",
+  "VAD + STT",
+  "Agent Orchestrator",
+  "Text-to-Speech",
+  "RAG",
+  "Human Handoff",
+  "Observability",
+];
 
-export default function Home() {
-  const [messages, setMessages] = useState<TranscriptMessage[]>([]);
-  const [toolCalls, setToolCalls] = useState<ToolCallLogEntry[]>([]);
-  const [intent, setIntent] = useState<Intent>(null);
-  const [confidence, setConfidence] = useState<number | null>(null);
-  const [handoff, setHandoff] = useState<HandoffContext | null>(null);
-  const [sending, setSending] = useState(false);
-  const [connectionError, setConnectionError] = useState<string | null>(null);
+const NAV_CARDS = [
+  {
+    href: "/console",
+    icon: Mic,
+    title: "Voice Console",
+    description: "Serbest metinle (yakında sesle) doğal dilde işlem yapın.",
+  },
+  {
+    href: "/workflows",
+    icon: Workflow,
+    title: "İş Akışları",
+    description: "Hasar açma, teminat sorgulama gibi adım adım rehberli akışlar.",
+  },
+  {
+    href: "/dashboard",
+    icon: SlidersHorizontal,
+    title: "Dashboard",
+    description: "Canlı Prometheus metrikleri: automation rate, handoff rate, latency.",
+  },
+];
 
-  const send = async (text: string) => {
-    const sessionId = getSessionId();
-    setMessages((prev) => [...prev, uiMessage("customer", text)]);
-    setSending(true);
-    setConnectionError(null);
-    try {
-      const res = await fetch("/api/agent/message", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sessionId, text }),
-      });
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error(body.error ?? `HTTP ${res.status}`);
-      }
-      const data: AgentTurnResponse = await res.json();
-      setMessages((prev) => [...prev, uiMessage("ai", data.reply)]);
-      setToolCalls((prev) => [...prev, ...data.toolCalls]);
-      setIntent(data.intent);
-      setConfidence(data.confidence);
-      setHandoff(data.handoff);
-    } catch (err) {
-      const message =
-        err instanceof Error
-          ? err.message
-          : "Bilinmeyen bir hata oluştu.";
-      setConnectionError(
-        `Agent'a ulaşılamadı: ${message}. mock-enterprise servisinin çalıştığından ve MOCK_ENTERPRISE_URL'in doğru ayarlandığından emin olun.`
-      );
-    } finally {
-      setSending(false);
-    }
-  };
+export default function OverviewPage() {
+  const [services, setServices] = useState<ServiceStatus[] | null>(null);
+  const [metrics, setMetrics] = useState<MetricsSummary | null>(null);
 
-  const reset = async () => {
-    const sessionId = getSessionId();
-    setMessages([]);
-    setToolCalls([]);
-    setIntent(null);
-    setConfidence(null);
-    setHandoff(null);
-    setConnectionError(null);
-    await fetch("/api/agent/reset", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ sessionId }),
-    }).catch(() => undefined);
-  };
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all([
+      fetch("/api/status").then((r) => r.json()),
+      fetch("/api/metrics/summary").then((r) => r.json()),
+    ]).then(([statusData, metricsData]) => {
+      if (cancelled) return;
+      setServices(statusData.services);
+      setMetrics(metricsData);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const upCount = services?.filter((s) => s.ok).length ?? 0;
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-4 p-4 md:p-6">
-      <header>
-        <h1 className="text-xl font-semibold text-slate-100">FinVoice Ops — Voice Console</h1>
-        <p className="text-sm text-slate-500">
-          Faz 2 demo — metin modu. Gerçek ses pipeline&apos;ı (VAD/STT/TTS) Faz 3 ve 5&apos;te,
-          LangGraph agent Faz 4&apos;te eklenecek.
-        </p>
-      </header>
-
-      {connectionError && (
-        <div className="rounded-lg border border-red-800 bg-red-950/40 px-4 py-2 text-sm text-red-300">
-          {connectionError}
-        </div>
-      )}
-
-      <MicVisualizer />
-
-      <div className="grid flex-1 grid-cols-1 gap-4 md:grid-cols-[2fr_1fr]">
-        <div className="min-h-[360px]">
-          <TranscriptPanel messages={messages} />
-        </div>
-        <div className="min-h-[360px]">
-          <ToolActivityPanel
-            intent={intent}
-            confidence={confidence}
-            toolCalls={toolCalls}
-            handoff={handoff}
+    <>
+      <PageHeader
+        breadcrumb="FinVoice Ops"
+        title="Genel Bakış"
+        description="Bankacılık ve sigorta operasyonları için gerçek zamanlı Voice AI automation platformu."
+      />
+      <PageBody>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <StatTile
+            label="Servis Durumu"
+            value={services ? `${upCount}/${services.length}` : "…"}
+            hint="Ayarlar'dan servis adreslerini değiştirebilirsiniz"
+            tone={services && upCount === services.length ? "success" : "warning"}
+            icon={<CheckCircle2 className="h-4 w-4" />}
+          />
+          <StatTile
+            label="Toplam Chat Turu"
+            value={metrics?.business ? metrics.business.chatTurns : "—"}
+            hint={metrics?.business ? undefined : "backend/ servisi çalışmıyor"}
+            tone="brand"
+            icon={<FileText className="h-4 w-4" />}
+          />
+          <StatTile
+            label="Automation Rate"
+            value={
+              metrics?.business?.automationRatePct !== null &&
+              metrics?.business?.automationRatePct !== undefined
+                ? `%${metrics.business.automationRatePct}`
+                : "—"
+            }
+            tone="success"
+            icon={<Workflow className="h-4 w-4" />}
+          />
+          <StatTile
+            label="Aktif Session"
+            value={metrics?.business ? metrics.business.activeSessions : "—"}
+            tone="neutral"
+            icon={<Mic className="h-4 w-4" />}
           />
         </div>
-      </div>
 
-      <ChatConsole onSend={send} onReset={reset} disabled={sending} />
-    </div>
+        <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
+          {NAV_CARDS.map((c) => (
+            <Link key={c.href} href={c.href} className="group">
+              <Card className="h-full transition-shadow group-hover:shadow-[var(--shadow-md)]">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--brand-soft)] text-[var(--brand)]">
+                  <c.icon className="h-4 w-4" />
+                </div>
+                <div className="mt-3 flex items-center gap-1 text-sm font-semibold text-[var(--text-primary)]">
+                  {c.title}
+                  <ArrowRight className="h-3.5 w-3.5 opacity-0 transition-opacity group-hover:opacity-100" />
+                </div>
+                <p className="mt-1 text-xs text-[var(--text-secondary)]">{c.description}</p>
+              </Card>
+            </Link>
+          ))}
+        </div>
+
+        <Card className="mt-6">
+          <CardHeader
+            title="Proje Yol Haritası"
+            description="ROADMAP.md — spesifikasyondaki 8 fazın tamamı bağımsız olarak çalışır ve test edilmiştir."
+          />
+          <div className="flex flex-wrap gap-2">
+            {PHASES.map((p, i) => (
+              <Badge key={p} tone="success" dot>
+                Faz {i + 1} — {p}
+              </Badge>
+            ))}
+          </div>
+        </Card>
+
+        <Card className="mt-6">
+          <CardHeader title="Servisler" description="Her servisin canlı sağlık durumu" />
+          {!services ? (
+            <p className="text-sm text-[var(--text-muted)]">Yükleniyor…</p>
+          ) : (
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {services.map((s) => (
+                <div
+                  key={s.key}
+                  className="flex items-center justify-between rounded-lg border border-[var(--border)] px-3 py-2.5"
+                >
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`h-2 w-2 rounded-full ${
+                        s.ok ? "bg-[var(--success)]" : "bg-[var(--danger)]"
+                      }`}
+                    />
+                    <span className="text-sm text-[var(--text-primary)]">{s.label}</span>
+                  </div>
+                  <span className="text-xs text-[var(--text-muted)]">
+                    {s.ok ? `${s.latencyMs}ms` : "erişilemiyor"}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </Card>
+      </PageBody>
+    </>
   );
 }

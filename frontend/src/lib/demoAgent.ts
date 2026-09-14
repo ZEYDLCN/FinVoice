@@ -164,10 +164,12 @@ async function run(
   return result;
 }
 
-/** Advances the conversation by exactly one user turn. Mutates `state`. */
+/** Advances the conversation by exactly one user turn. Mutates `state`.
+ * `baseUrl` overrides the mock-enterprise URL for this call (Settings page). */
 export async function handleTurn(
   state: ConversationState,
-  userText: string
+  userText: string,
+  baseUrl?: string
 ): Promise<AgentTurnResponse> {
   const toolCalls: ToolCallLogEntry[] = [];
   pushMessage(state, "customer", userText);
@@ -183,13 +185,13 @@ export async function handleTurn(
         "Sizi bir müşteri temsilcisine aktarıyorum. Görüşme özetiniz temsilciye iletildi.";
       confidence = 0.3;
     } else if (state.intent === "create_claim") {
-      reply = await continueCreateClaim(state, userText, toolCalls);
+      reply = await continueCreateClaim(state, userText, toolCalls, baseUrl);
     } else if (state.intent === "claim_status") {
-      reply = await continueClaimStatus(state, userText, toolCalls);
+      reply = await continueClaimStatus(state, userText, toolCalls, baseUrl);
     } else if (state.intent === "policy_coverage") {
-      reply = await continuePolicyCoverage(state, userText, toolCalls);
+      reply = await continuePolicyCoverage(state, userText, toolCalls, baseUrl);
     } else if (state.intent === "lost_card") {
-      reply = await continueLostCard(state, userText, toolCalls);
+      reply = await continueLostCard(state, userText, toolCalls, baseUrl);
     } else {
       const intent = detectIntent(userText);
       state.intent = intent;
@@ -201,16 +203,16 @@ export async function handleTurn(
 
       switch (intent) {
         case "create_claim":
-          reply = await continueCreateClaim(state, userText, toolCalls);
+          reply = await continueCreateClaim(state, userText, toolCalls, baseUrl);
           break;
         case "claim_status":
-          reply = await continueClaimStatus(state, userText, toolCalls);
+          reply = await continueClaimStatus(state, userText, toolCalls, baseUrl);
           break;
         case "policy_coverage":
-          reply = await continuePolicyCoverage(state, userText, toolCalls);
+          reply = await continuePolicyCoverage(state, userText, toolCalls, baseUrl);
           break;
         case "lost_card":
-          reply = await continueLostCard(state, userText, toolCalls);
+          reply = await continueLostCard(state, userText, toolCalls, baseUrl);
           break;
         default: {
           state.confusionCount += 1;
@@ -255,7 +257,8 @@ export async function handleTurn(
 async function continueCreateClaim(
   state: ConversationState,
   userText: string,
-  toolCalls: ToolCallLogEntry[]
+  toolCalls: ToolCallLogEntry[],
+  baseUrl?: string
 ): Promise<string> {
   if (!state.slots.policyNumber) {
     const policyNumber = extractPolicyNumber(userText);
@@ -266,7 +269,7 @@ async function continueCreateClaim(
     const policy = (await run(
       "get_policy",
       { policyNumber },
-      () => mockApi.getPolicy(policyNumber),
+      () => mockApi.getPolicy(policyNumber, baseUrl),
       toolCalls
     )) as Awaited<ReturnType<typeof mockApi.getPolicy>>;
 
@@ -303,12 +306,15 @@ async function continueCreateClaim(
         location: state.slots.location,
       },
       () =>
-        mockApi.createClaim({
-          policyNumber: state.slots.policyNumber,
-          accidentDate: state.slots.accidentDate,
-          location: state.slots.location,
-          description: state.originalUtterance ?? "Voice AI üzerinden oluşturuldu",
-        }),
+        mockApi.createClaim(
+          {
+            policyNumber: state.slots.policyNumber,
+            accidentDate: state.slots.accidentDate,
+            location: state.slots.location,
+            description: state.originalUtterance ?? "Voice AI üzerinden oluşturuldu",
+          },
+          baseUrl
+        ),
       toolCalls
     )) as Awaited<ReturnType<typeof mockApi.createClaim>>;
 
@@ -327,7 +333,8 @@ async function continueCreateClaim(
 async function continueClaimStatus(
   state: ConversationState,
   userText: string,
-  toolCalls: ToolCallLogEntry[]
+  toolCalls: ToolCallLogEntry[],
+  baseUrl?: string
 ): Promise<string> {
   const claimId = state.slots.claimId ?? extractClaimId(userText);
   if (!claimId) {
@@ -340,7 +347,7 @@ async function continueClaimStatus(
   const claim = (await run(
     "get_claim_status",
     { claimId },
-    () => mockApi.getClaimStatus(claimId),
+    () => mockApi.getClaimStatus(claimId, baseUrl),
     toolCalls
   )) as Awaited<ReturnType<typeof mockApi.getClaimStatus>>;
 
@@ -355,7 +362,8 @@ async function continueClaimStatus(
 async function continuePolicyCoverage(
   state: ConversationState,
   userText: string,
-  toolCalls: ToolCallLogEntry[]
+  toolCalls: ToolCallLogEntry[],
+  baseUrl?: string
 ): Promise<string> {
   if (!state.slots.policyNumber) {
     const policyNumber = extractPolicyNumber(userText);
@@ -379,7 +387,7 @@ async function continuePolicyCoverage(
   const coverage = (await run(
     "check_policy_coverage",
     { policyNumber: state.slots.policyNumber, topic: state.slots.topic },
-    () => mockApi.checkCoverage(state.slots.policyNumber, state.slots.topic),
+    () => mockApi.checkCoverage(state.slots.policyNumber, state.slots.topic, baseUrl),
     toolCalls
   )) as Awaited<ReturnType<typeof mockApi.checkCoverage>>;
 
@@ -393,7 +401,8 @@ async function continuePolicyCoverage(
 async function continueLostCard(
   state: ConversationState,
   userText: string,
-  toolCalls: ToolCallLogEntry[]
+  toolCalls: ToolCallLogEntry[],
+  baseUrl?: string
 ): Promise<string> {
   if (!state.slots.customerId) {
     const customerId = extractCustomerId(userText);
@@ -411,7 +420,7 @@ async function continueLostCard(
     const cards = (await run(
       "get_cards",
       { customerId: state.slots.customerId },
-      () => mockApi.listCustomerCards(state.slots.customerId),
+      () => mockApi.listCustomerCards(state.slots.customerId, baseUrl),
       toolCalls
     )) as Awaited<ReturnType<typeof mockApi.listCustomerCards>>;
 
@@ -438,13 +447,13 @@ async function continueLostCard(
   await run(
     "freeze_card",
     { cardId: state.slots.cardId },
-    () => mockApi.freezeCard(state.slots.cardId),
+    () => mockApi.freezeCard(state.slots.cardId, baseUrl),
     toolCalls
   );
   const newCard = (await run(
     "request_new_card",
     { cardId: state.slots.cardId },
-    () => mockApi.requestReplacementCard(state.slots.cardId),
+    () => mockApi.requestReplacementCard(state.slots.cardId, baseUrl),
     toolCalls
   )) as Awaited<ReturnType<typeof mockApi.requestReplacementCard>>;
 

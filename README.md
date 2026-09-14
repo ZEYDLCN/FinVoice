@@ -56,8 +56,14 @@ Proje **fazlara bölünerek** geliştirildi — tam plan için **[`ROADMAP.md`](
 Her fazın bağımsız olarak çalıştığı gerçek testlerle (ve çoğu fazda canlı,
 çalışan servislerle) doğrulandı. Eksik olan tek şey, bu parçaları uçtan uca
 bağlayan orkestrasyon kablolaması — bkz. `ROADMAP.md`'nin sonundaki not.
-| 7 | Human handoff + conversation summary | ⏳ |
-| 8 | Observability + business dashboard (Prometheus/Grafana) | ⏳ |
+
+Fazların üstüne, `frontend/`'i tek sayfalık bir Voice Console'dan kurumsal,
+çok sayfalı bir ürün deneyimine genişleten bir tasarım/UX katmanı eklendi:
+Genel Bakış, rehberli İş Akışları (hasar açma, hasar durumu, teminat
+sorgulama, kayıp kart), canlı Prometheus tabanlı Dashboard ve servis
+adresi Ayarları — ortak bir sidebar/topbar kabuğu ve açık/koyu tema
+destekli tasarım token sistemiyle. Detay için
+[`frontend/README.md`](./frontend/README.md).
 
 ## Repository yapısı
 
@@ -65,7 +71,7 @@ bağlayan orkestrasyon kablolaması — bkz. `ROADMAP.md`'nin sonundaki not.
 FinVoice/
 ├── mock-enterprise/   # Faz 1 — sahte Customer/Policy/Claims/Card/Support API'leri (FastAPI)
 ├── backend/           # Faz 4 (tamamlandı) — LangGraph agent, tools, api
-├── frontend/          # Faz 2 — Next.js Voice Console (transcript, tool activity, mikrofon)
+├── frontend/          # Next.js ürün arayüzü — Genel Bakış, Voice Console, İş Akışları, Dashboard, Ayarlar
 ├── voice/             # Faz 3 (VAD+STT, tamamlandı) & Faz 5 (TTS) — bkz. voice/README.md
 ├── rag/               # Faz 6 (tamamlandı) — PDF ingestion, TF-IDF+FAISS retrieval
 ├── monitoring/        # Faz 8 (tamamlandı) — Prometheus config + Grafana dashboard-as-code
@@ -131,7 +137,7 @@ cd mock-enterprise && pytest
 
 Detaylı endpoint listesi için [`mock-enterprise/README.md`](./mock-enterprise/README.md).
 
-## Hızlı Başlangıç (Faz 2 — Voice Console)
+## Hızlı Başlangıç (Frontend — ürün arayüzü)
 
 `mock-enterprise` çalışırken (yukarıdaki adım), başka bir terminalde:
 
@@ -142,14 +148,23 @@ cp .env.example .env.local
 npm run dev
 ```
 
-http://localhost:3000 adresinde transcript paneli, tool activity paneli ve
-mikrofon göstergesini içeren konsolu açın; örnek komutlardan birine tıklayıp
-gerçek mock-enterprise API çağrılarının uçtan uca çalıştığını görün (ör.
-"Arabamla kaza yaptım, hasar dosyası açtırmak istiyorum." → poliçe kontrolü →
-tarih/konum soruları → `CLM-98221` dosya numarası).
+http://localhost:3000 adresinde **Genel Bakış** sayfası açılır — sidebar'dan
+diğer sayfalara geçin:
 
-Bu fazdaki agent, gerçek bir LLM değil; Faz 4'te LangGraph ile değişecek
-basit bir "scripted demo agent"dır — detay için
+- **Voice Console** (`/console`): transcript paneli, tool activity paneli ve
+  mikrofon göstergesiyle serbest metin sohbeti. Örnek komutlardan birine
+  tıklayıp gerçek mock-enterprise API çağrılarının uçtan uca çalıştığını
+  görün (ör. "Arabamla kaza yaptım, hasar dosyası açtırmak istiyorum." →
+  poliçe kontrolü → tarih/konum soruları → `CLM-98221` dosya numarası).
+- **İş Akışları** (`/workflows`): aynı 4 senaryonun adım adım rehberli form
+  hâli (hasar açma, hasar durumu, teminat sorgulama, kayıp kart).
+- **Dashboard** (`/dashboard`): `backend`/`voice`/`rag`/`mock-enterprise`
+  çalışıyorsa `/metrics`'lerinden canlı iş metrikleri.
+- **Ayarlar** (`/settings`): servis adreslerini yeniden derlemeden değiştirin.
+
+Console'daki agent gerçek bir LLM değil; `backend/`'deki gerçek LangGraph
+agent'ının plumbing'ini kanıtlayan basit bir "scripted demo agent"dır — iş
+akışları sayfaları ise doğrudan gerçek REST API'lere gider. Detay için
 [`frontend/README.md`](./frontend/README.md).
 
 ## Hızlı Başlangıç (Faz 3 — Voice Gateway: VAD + STT)

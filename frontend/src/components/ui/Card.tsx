@@ -1,0 +1,41 @@
+import type { HTMLAttributes, ReactNode } from "react";
+
+export function Card({
+  children,
+  className = "",
+  padded = true,
+  ...rest
+}: HTMLAttributes<HTMLDivElement> & { children: ReactNode; padded?: boolean }) {
+  return (
+    <div
+      className={`rounded-xl border border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow-sm)] ${
+        padded ? "p-5" : ""
+      } ${className}`}
+      {...rest}
+    >
+      {children}
+    </div>
+  );
+}
+
+export function CardHeader({
+  title,
+  description,
+  action,
+}: {
+  title: ReactNode;
+  description?: ReactNode;
+  action?: ReactNode;
+}) {
+  return (
+    <div className="mb-4 flex items-start justify-between gap-3">
+      <div>
+        <h3 className="text-sm font-semibold text-[var(--text-primary)]">{title}</h3>
+        {description && (
+          <p className="mt-0.5 text-xs text-[var(--text-secondary)]">{description}</p>
+        )}
+      </div>
+      {action}
+    </div>
+  );
+}

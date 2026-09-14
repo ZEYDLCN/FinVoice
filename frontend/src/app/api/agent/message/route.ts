@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { handleTurn } from "@/lib/demoAgent";
+import { getServiceUrls } from "@/lib/serviceConfig";
 import { getSession, saveSession } from "@/lib/sessionStore";
 
 export async function POST(req: Request) {
@@ -18,8 +19,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "text is required" }, { status: 400 });
   }
 
+  const { mockEnterprise } = await getServiceUrls();
   const state = getSession(sessionId);
-  const response = await handleTurn(state, text.trim());
+  const response = await handleTurn(state, text.trim(), mockEnterprise);
   saveSession(sessionId, state);
 
   return NextResponse.json(response);

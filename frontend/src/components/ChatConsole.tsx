@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import { RotateCcw, Send } from "lucide-react";
 
 const EXAMPLE_PROMPTS = [
   "Arabamla kaza yaptım, hasar dosyası açtırmak istiyorum.",
@@ -28,7 +29,7 @@ export function ChatConsole({
   };
 
   return (
-    <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
+    <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 shadow-[var(--shadow-sm)]">
       <div className="mb-3 flex flex-wrap gap-2">
         {EXAMPLE_PROMPTS.map((p) => (
           <button
@@ -36,7 +37,7 @@ export function ChatConsole({
             type="button"
             disabled={disabled}
             onClick={() => onSend(p)}
-            className="rounded-full border border-slate-700 px-3 py-1 text-xs text-slate-300 transition hover:border-sky-500 hover:text-sky-300 disabled:opacity-40"
+            className="rounded-full border border-[var(--border-strong)] px-3 py-1 text-xs text-[var(--text-secondary)] transition-colors hover:border-[var(--brand)] hover:text-[var(--brand)] disabled:opacity-40"
           >
             {p}
           </button>
@@ -47,22 +48,24 @@ export function ChatConsole({
           value={value}
           onChange={(e) => setValue(e.target.value)}
           disabled={disabled}
-          placeholder="Mesajınızı yazın... (metin modu — ses Faz 3'te)"
-          className="flex-1 rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none placeholder:text-slate-600 focus:border-sky-500 disabled:opacity-50"
+          placeholder="Mesajınızı yazın..."
+          className="flex-1 rounded-lg border border-[var(--border-strong)] bg-[var(--bg)] px-3 py-2 text-sm text-[var(--text-primary)] outline-none transition-colors placeholder:text-[var(--text-muted)] focus:border-[var(--brand)] disabled:opacity-50"
         />
         <button
           type="submit"
           disabled={disabled}
-          className="rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-sky-500 disabled:opacity-50"
+          className="inline-flex items-center gap-2 rounded-lg bg-[var(--brand)] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[var(--brand-hover)] disabled:opacity-50"
         >
+          <Send className="h-4 w-4" />
           Gönder
         </button>
         <button
           type="button"
           onClick={onReset}
           disabled={disabled}
-          className="rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-400 transition hover:border-slate-500 hover:text-slate-200 disabled:opacity-50"
+          className="inline-flex items-center gap-2 rounded-lg border border-[var(--border-strong)] px-3 py-2 text-sm text-[var(--text-secondary)] transition-colors hover:border-[var(--border-strong)] hover:text-[var(--text-primary)] disabled:opacity-50"
         >
+          <RotateCcw className="h-4 w-4" />
           Sıfırla
         </button>
       </form>

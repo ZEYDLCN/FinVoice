@@ -1,8 +1,9 @@
+import { SERVICE_DEFAULTS } from "./serviceConfig";
 import type { ToolCallLogEntry } from "./types";
 
-const BASE_URL = process.env.MOCK_ENTERPRISE_URL ?? "http://localhost:8000";
+const DEFAULT_BASE_URL = SERVICE_DEFAULTS.mockEnterprise;
 
-class MockApiError extends Error {
+export class MockApiError extends Error {
   status: number;
   constructor(status: number, message: string) {
     super(message);
@@ -10,8 +11,8 @@ class MockApiError extends Error {
   }
 }
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${BASE_URL}${path}`, {
+async function request<T>(path: string, init?: RequestInit, baseUrl = DEFAULT_BASE_URL): Promise<T> {
+  const res = await fetch(`${baseUrl}${path}`, {
     ...init,
     headers: { "Content-Type": "application/json", ...init?.headers },
     cache: "no-store",
@@ -120,59 +121,66 @@ export interface CoverageCheckResponse {
 }
 
 export const mockApi = {
-  getPolicy: (policyNumber: string) =>
-    request<Policy>(`/api/policies/${encodeURIComponent(policyNumber)}`),
+  getPolicy: (policyNumber: string, baseUrl?: string) =>
+    request<Policy>(`/api/policies/${encodeURIComponent(policyNumber)}`, undefined, baseUrl),
 
-  checkCoverage: (policyNumber: string, topic: string) =>
+  checkCoverage: (policyNumber: string, topic: string, baseUrl?: string) =>
     request<CoverageCheckResponse>(
-      `/api/policies/${encodeURIComponent(policyNumber)}/coverage?topic=${encodeURIComponent(topic)}`
+      `/api/policies/${encodeURIComponent(policyNumber)}/coverage?topic=${encodeURIComponent(topic)}`,
+      undefined,
+      baseUrl
     ),
 
-  createClaim: (input: {
-    policyNumber: string;
-    accidentDate: string;
-    location: string;
-    description: string;
-  }) =>
-    request<Claim>(`/api/claims`, {
-      method: "POST",
-      body: JSON.stringify(input),
-    }),
+  createClaim: (
+    input: {
+      policyNumber: string;
+      accidentDate: string;
+      location: string;
+      description: string;
+    },
+    baseUrl?: string
+  ) =>
+    request<Claim>(
+      `/api/claims`,
+      { method: "POST", body: JSON.stringify(input) },
+      baseUrl
+    ),
 
-  getClaimStatus: (claimId: string) =>
-    request<Claim>(`/api/claims/${encodeURIComponent(claimId)}`),
+  getClaimStatus: (claimId: string, baseUrl?: string) =>
+    request<Claim>(`/api/claims/${encodeURIComponent(claimId)}`, undefined, baseUrl),
 
-  listCustomerCards: (customerId: string) =>
-    request<Card[]>(`/api/customers/${encodeURIComponent(customerId)}/cards`),
+  listCustomerCards: (customerId: string, baseUrl?: string) =>
+    request<Card[]>(`/api/customers/${encodeURIComponent(customerId)}/cards`, undefined, baseUrl),
 
-  getCustomer: (customerId: string) =>
+  getCustomer: (customerId: string, baseUrl?: string) =>
     request<{ customerId: string; name: string }>(
-      `/api/customers/${encodeURIComponent(customerId)}`
+      `/api/customers/${encodeURIComponent(customerId)}`,
+      undefined,
+      baseUrl
     ),
 
-  freezeCard: (cardId: string) =>
+  freezeCard: (cardId: string, baseUrl?: string) =>
     request<{ cardId: string; status: string }>(
       `/api/cards/${encodeURIComponent(cardId)}/freeze`,
-      { method: "POST" }
+      { method: "POST" },
+      baseUrl
     ),
 
-  requestReplacementCard: (cardId: string) =>
+  requestReplacementCard: (cardId: string, baseUrl?: string) =>
     request<{
       newCardId: string;
       replacesCardId: string;
       status: string;
       estimatedDeliveryDays: number;
-    }>(`/api/cards/${encodeURIComponent(cardId)}/request-replacement`, {
-      method: "POST",
-    }),
+    }>(
+      `/api/cards/${encodeURIComponent(cardId)}/request-replacement`,
+      { method: "POST" },
+      baseUrl
+    ),
 
-  createSupportTicket: (input: {
-    customerId: string;
-    subject: string;
-    description: string;
-  }) =>
-    request(`/api/support/tickets`, {
-      method: "POST",
-      body: JSON.stringify(input),
-    }),
+  createSupportTicket: (
+    input: { customerId: string; subject: string; description: string },
+    baseUrl?: string
+  ) =>
+    request(`/api/support/tickets`, { method: "POST", body: JSON.stringify(input) }, baseUrl),
 };
