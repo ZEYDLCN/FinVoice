@@ -162,10 +162,10 @@ diğer sayfalara geçin:
   çalışıyorsa `/metrics`'lerinden canlı iş metrikleri.
 - **Ayarlar** (`/settings`): servis adreslerini yeniden derlemeden değiştirin.
 
-Console'daki agent gerçek bir LLM değil; `backend/`'deki gerçek LangGraph
-agent'ının plumbing'ini kanıtlayan basit bir "scripted demo agent"dır — iş
-akışları sayfaları ise doğrudan gerçek REST API'lere gider. Detay için
-[`frontend/README.md`](./frontend/README.md).
+Console, `/api/agent/message` üzerinden gerçek `backend/v1/chat` servisine
+bağlıdır. LangGraph konuşma akışını yönetir, Qwen3 gerekli aracı seçer ve
+doğrulanmış kurumsal API sonuçları Türkçe olarak sunulur. Yanıtlar Piper ile
+seslendirilir; detay için [`frontend/README.md`](./frontend/README.md).
 
 ## Hızlı Başlangıç (Faz 3 — Voice Gateway: VAD + STT)
 
@@ -188,7 +188,7 @@ yoktur — detay ve ortam değişkenleri için
 ## Hızlı Başlangıç (Faz 4 — Agent Orchestrator: LangGraph + Ollama)
 
 ```bash
-# Ollama kurulu ve çalışır olmalı: ollama pull qwen2.5:7b && ollama serve
+# Ollama kurulu ve çalışır olmalı: ollama pull qwen3:1.7b && ollama serve
 cd FinVoice
 python -m venv backend/.venv && source backend/.venv/bin/activate
 pip install -r backend/requirements.txt
@@ -201,7 +201,7 @@ curl -X POST http://localhost:8200/v1/chat \
   -d '{"sessionId":"s1","text":"Arabamla kaza yaptım, hasar dosyası açtırmak istiyorum."}'
 ```
 
-Bu, Faz 2'deki scripted `demoAgent.ts`'in yerini alacak **gerçek** LangGraph
+Bu, Faz 2'deki scripted `demoAgent.ts`'in yerini alan **gerçek** LangGraph
 tool-calling agent'ıdır — aynı `{reply, toolCalls, handoff}` sözleşmesini
 kullanır. Ollama kurulu değilse `FINVOICE_AGENT_LLM_BACKEND=fake` ile
 API'yi (gerçek muhakeme olmadan) yine de ayağa kaldırıp test edebilirsiniz —

@@ -34,3 +34,4 @@ class ChatResponse(BaseModel):
     reply: str
     toolCalls: list[ToolCallLogEntry]
     handoff: Optional[HandoffContext] = None
+    responseMode: str = "llm"

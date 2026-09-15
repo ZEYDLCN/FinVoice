@@ -17,10 +17,16 @@ services:
     container_name: finvoice-frontend
     environment:
       MOCK_ENTERPRISE_URL: http://mock-enterprise:8000
+      AGENT_BACKEND_URL: http://backend:8200
+      VOICE_SERVICE_URL: http://voice:8100
+      RAG_SERVICE_URL: http://rag:8300
     ports:
       - "3000:3000"
     depends_on:
       - mock-enterprise
+      - backend
+      - voice
+      - rag
 
   voice:
     build:
@@ -30,11 +36,8 @@ services:
     environment:
       FINVOICE_VOICE_STT_BACKEND: faster-whisper
       FINVOICE_VOICE_WHISPER_MODEL: tiny
-      # Bir Piper ses modeli indirip aşağıdaki volume'a koyana kadar "fake"
-      # (sessiz WAV) kalır — bkz. voice/tts/models/README.md. Gerçek TTS
-      # için: FINVOICE_VOICE_TTS_BACKEND=piper yapın ve modeli
-      # ./voice/tts/models/'e indirin.
-      FINVOICE_VOICE_TTS_BACKEND: fake
+      FINVOICE_VOICE_TTS_BACKEND: piper
+      FINVOICE_VOICE_PIPER_VOICE_PATH: /app/voice/tts/models/tr_TR-dfki-medium.onnx
     ports:
       - "8100:8100"
     volumes:
@@ -51,7 +54,7 @@ services:
     volumes:
       - ollama-models:/root/.ollama
     # İlk çalıştırmada modeli çekmeniz gerekir:
-    #   docker compose exec ollama ollama pull qwen2.5:7b
+    #   docker compose exec ollama ollama pull qwen3:1.7b
 
   rag:
     build:
@@ -70,9 +73,12 @@ services:
       MOCK_ENTERPRISE_URL: http://mock-enterprise:8000
       RAG_SERVICE_URL: http://rag:8300
       FINVOICE_AGENT_OLLAMA_HOST: http://ollama:11434
-      FINVOICE_AGENT_AGENT_MODEL: qwen2.5:7b
+      FINVOICE_AGENT_AGENT_MODEL: qwen3:1.7b
+      FINVOICE_AGENT_LLM_BACKEND: ollama
     ports:
       - "8200:8200"
+    volumes:
+      - ./backend:/app/backend:ro
     depends_on:
       - mock-enterprise
       - rag
@@ -87,7 +93,7 @@ services:
       - "9090:9090"
 
   grafana:
-    image: grafana/grafana:latest
+    image: grafana/grafana-oss:latest
     container_name: finvoice-grafana
     environment:
       GF_AUTH_ANONYMOUS_ENABLED: "true"

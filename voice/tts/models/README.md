@@ -6,9 +6,7 @@ binary olduğu ve onlarca MB olduğu için repoya commit edilmedi.
 ## İndirme (normal ortamlarda — Hugging Face erişimi olan)
 
 ```bash
-python -m piper.download_voices en_US-lessac-medium --download-dir voice/tts/models
-# Türkçe için topluluk sesleri: https://huggingface.co/rhasspy/piper-voices
-# altında tr/tr_TR/... altında ara.
+python -m piper.download_voices tr_TR-dfki-medium --download-dir voice/tts/models
 ```
 
 ## İndirme (Hugging Face'in engellendiği ortamlarda)
@@ -31,5 +29,5 @@ gerçek sentezleme ile doğrulandı (bkz. `voice/tests/test_synthesizer_real.py`
 ## Ortam değişkeni
 
 ```bash
-export FINVOICE_VOICE_PIPER_VOICE_PATH=voice/tts/models/en-us-lessac-low.onnx
+export FINVOICE_VOICE_PIPER_VOICE_PATH=voice/tts/models/tr_TR-dfki-medium.onnx
 ```

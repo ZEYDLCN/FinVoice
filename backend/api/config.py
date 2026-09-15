@@ -9,7 +9,7 @@ class Settings(BaseSettings):
     # "fake" runs without any LLM — see llm/fake.py's StaticReplyChatModel.
     llm_backend: str = "ollama"
     ollama_host: str = "http://localhost:11434"
-    agent_model: str = "qwen2.5:7b"
+    agent_model: str = "qwen3:1.7b"
     agent_temperature: float = 0.2
 
 

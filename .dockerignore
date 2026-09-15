@@ -1,0 +1,5 @@
+.git/
+**/__pycache__/
+**/.pytest_cache/
+voice/.piper_cache/
+voice/tts/models/*.onnx*

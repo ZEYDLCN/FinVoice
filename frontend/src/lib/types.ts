@@ -52,5 +52,6 @@ export interface AgentTurnResponse {
   intent: Intent;
   toolCalls: ToolCallLogEntry[];
   handoff: HandoffContext | null;
-  confidence: number;
+  confidence: number | null;
+  responseMode: "llm" | "validation" | "guardrail" | "scripted";
 }

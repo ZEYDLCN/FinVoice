@@ -22,4 +22,6 @@ def get_chat_model() -> BaseChatModel:
         base_url=settings.ollama_host,
         model=settings.agent_model,
         temperature=settings.agent_temperature,
+        reasoning=False,
+        num_predict=160,
     )

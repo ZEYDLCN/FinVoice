@@ -19,6 +19,7 @@ from prometheus_fastapi_instrumentator import Instrumentator
 from backend.agents.graph import build_graph
 from backend.agents.handoff import format_dossier, generate_handoff_summary
 from backend.api.schemas import ChatRequest, ChatResponse, HandoffContext, ToolCallLogEntry
+from backend.api.tool_responses import format_verified_tool_reply
 from backend.llm.factory import get_chat_model
 from backend.observability.metrics import (
     CHAT_LATENCY_SECONDS,
@@ -116,6 +117,9 @@ async def chat(req: ChatRequest, runtime: AgentRuntime = Depends(get_runtime)):
         else:
             last = result["messages"][-1]
             reply = last.content if isinstance(last, AIMessage) else str(last.content)
+            verified_reply = format_verified_tool_reply(tool_log)
+            if verified_reply is not None:
+                reply = verified_reply
 
     CHAT_LATENCY_SECONDS.observe(time.perf_counter() - turn_start)
 
@@ -123,4 +127,5 @@ async def chat(req: ChatRequest, runtime: AgentRuntime = Depends(get_runtime)):
         reply=reply,
         toolCalls=[ToolCallLogEntry(**entry) for entry in tool_log],
         handoff=handoff,
+        responseMode=result.get("response_mode", "guardrail" if handoff else "llm"),
     )

@@ -81,6 +81,28 @@ function detectIntent(rawText: string): Intent {
   return null;
 }
 
+function isGreeting(text: string): boolean {
+  return /^\s*(merhaba|selam(?:lar)?|günaydın|iyi (günler|akşamlar))[\s!,.?]*$/iu.test(text);
+}
+
+function greetingReply(state: ConversationState): string {
+  const reminders: Record<string, string> = {
+    policyNumber: "Poliçe numaranızı TR-92831 biçiminde paylaşabilirsiniz.",
+    customerId: "Kayıp kart işlemine devam etmek için Müşteri ID'nizi CUST-001 biçiminde paylaşabilirsiniz.",
+    claimId: "Hasar dosya numaranızı CLM-98221 biçiminde paylaşabilirsiniz.",
+    accidentDate: "Kaza tarihini GG.AA.YYYY biçiminde paylaşabilirsiniz.",
+    location: "Kazanın gerçekleştiği şehir veya konumu paylaşabilirsiniz.",
+    topic: "Kontrol etmek istediğiniz teminatı yazabilirsiniz.",
+    last4: "Dondurulacak kartın son dört hanesini paylaşabilirsiniz.",
+  };
+
+  const reminder = state.awaitingSlot ? reminders[state.awaitingSlot] : undefined;
+  if (reminder) {
+    return `Merhaba! Devam eden işleminiz var. ${reminder} Başka bir işlem yapmak isterseniz onu da doğrudan yazabilirsiniz.`;
+  }
+  return "Merhaba! Hasar, poliçe teminatı veya kayıp kart işlemlerinde size yardımcı olabilirim.";
+}
+
 function extractPolicyNumber(text: string): string | undefined {
   return text.match(/\bTR-\d{4,6}\b/i)?.[0].toUpperCase();
 }
@@ -176,14 +198,40 @@ export async function handleTurn(
 
   let reply: string;
   let confidence = 0.9;
+  const detectedIntent = detectIntent(userText);
 
   try {
     // A request to talk to a human always interrupts whatever flow is active.
-    if (detectIntent(userText) === "human_handoff") {
+    if (detectedIntent === "human_handoff") {
       toHandoff(state, "Kullanıcı temsilciyle görüşmek istedi");
       reply =
         "Sizi bir müşteri temsilcisine aktarıyorum. Görüşme özetiniz temsilciye iletildi.";
       confidence = 0.3;
+    } else if (detectedIntent !== null && detectedIntent !== state.intent) {
+      // A clear new request interrupts the active slot-filling flow.
+      state.intent = detectedIntent;
+      state.originalUtterance = userText;
+      state.slots = {};
+      state.awaitingSlot = null;
+      state.confusionCount = 0;
+
+      switch (detectedIntent) {
+        case "create_claim":
+          reply = await continueCreateClaim(state, userText, toolCalls, baseUrl);
+          break;
+        case "claim_status":
+          reply = await continueClaimStatus(state, userText, toolCalls, baseUrl);
+          break;
+        case "policy_coverage":
+          reply = await continuePolicyCoverage(state, userText, toolCalls, baseUrl);
+          break;
+        case "lost_card":
+          reply = await continueLostCard(state, userText, toolCalls, baseUrl);
+          break;
+      }
+    } else if (isGreeting(userText)) {
+      reply = greetingReply(state);
+      confidence = 0.95;
     } else if (state.intent === "create_claim") {
       reply = await continueCreateClaim(state, userText, toolCalls, baseUrl);
     } else if (state.intent === "claim_status") {
@@ -193,7 +241,7 @@ export async function handleTurn(
     } else if (state.intent === "lost_card") {
       reply = await continueLostCard(state, userText, toolCalls, baseUrl);
     } else {
-      const intent = detectIntent(userText);
+      const intent = detectedIntent;
       state.intent = intent;
       state.originalUtterance = userText;
       state.slots = {};
@@ -248,6 +296,7 @@ export async function handleTurn(
     toolCalls,
     handoff: state.handoff,
     confidence,
+    responseMode: "scripted",
   };
 }
 

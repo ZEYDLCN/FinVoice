@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     # "fake" avoids loading a real Piper voice model — used by default in
     # tests/CI. Set to "piper" + a real piper_voice_path for real TTS.
     tts_backend: str = "piper"
-    piper_voice_path: str = "voice/tts/models/en-us-lessac-low.onnx"
+    piper_voice_path: str = "voice/tts/models/tr_TR-dfki-medium.onnx"
 
 
 @lru_cache

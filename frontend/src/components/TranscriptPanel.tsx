@@ -1,10 +1,20 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { MessageSquareText } from "lucide-react";
+import { LoaderCircle, MessageSquareText, Volume2 } from "lucide-react";
 import type { TranscriptMessage } from "@/lib/types";
 
-export function TranscriptPanel({ messages }: { messages: TranscriptMessage[] }) {
+export function TranscriptPanel({
+  messages,
+  onSpeak,
+  speakingMessageId,
+  voiceLoading,
+}: {
+  messages: TranscriptMessage[];
+  onSpeak: (message: TranscriptMessage) => void;
+  speakingMessageId: string | null;
+  voiceLoading: boolean;
+}) {
   const endRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -42,6 +52,22 @@ export function TranscriptPanel({ messages }: { messages: TranscriptMessage[] })
             <div className="mt-1 text-[10px] uppercase tracking-wide text-[var(--text-muted)]">
               {m.role === "customer" ? "Müşteri" : m.role === "ai" ? "FinVoice AI" : "Sistem"}
             </div>
+            {m.role === "ai" && (
+              <button
+                type="button"
+                onClick={() => onSpeak(m)}
+                className="mt-1 inline-flex items-center gap-1 rounded px-1.5 py-1 text-xs text-[var(--brand)] transition-colors hover:bg-[var(--surface-hover)]"
+                title="Yanıtı sesli dinle"
+                aria-label="Yanıtı sesli dinle"
+              >
+                {speakingMessageId === m.id && voiceLoading ? (
+                  <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Volume2 className="h-3.5 w-3.5" />
+                )}
+                Dinle
+              </button>
+            )}
           </div>
         ))}
         <div ref={endRef} />

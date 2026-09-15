@@ -16,11 +16,13 @@ export function ToolActivityPanel({
   confidence,
   toolCalls,
   handoff,
+  responseMode,
 }: {
   intent: Intent;
   confidence: number | null;
   toolCalls: ToolCallLogEntry[];
   handoff: HandoffContext | null;
+  responseMode: "llm" | "validation" | "guardrail" | "scripted";
 }) {
   return (
     <div className="flex h-full flex-col rounded-xl border border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow-sm)]">
@@ -35,7 +37,15 @@ export function ToolActivityPanel({
             Intent
           </div>
           <div className="text-sm text-[var(--text-primary)]">
-            {intent ? INTENT_LABELS[intent] : "—"}
+            {intent
+              ? INTENT_LABELS[intent]
+              : responseMode === "validation"
+                ? "LangGraph alan doğrulaması"
+                : responseMode === "guardrail"
+                  ? "Güvenlik kuralı"
+                  : responseMode === "scripted"
+                    ? "Kural tabanlı demo"
+                    : "Qwen3 tarafından dinamik"}
           </div>
           {confidence !== null && (
             <div className="mt-1 text-xs text-[var(--text-muted)]">

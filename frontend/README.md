@@ -51,30 +51,17 @@ isteği işlerken `getServiceUrls()` ile önce cookie'yi, yoksa env
 varsayılanını okur — böylece kod yeniden derlenmeden farklı bir ortama
 (ör. tünellenmiş uzak bir servis) yönlendirilebilir.
 
-## Neden Voice Console'da "text-mode"?
+## Voice Console nasıl çalışır?
 
-`ROADMAP.md`'deki Faz sırası: önce API'ler (Faz 1), sonra frontend kabuğu
-(Faz 2), sonra ses girişi (Faz 3) ve ancak ondan sonra gerçek LLM agent
-(Faz 4). Faz 2'de henüz ne STT ne de LangGraph agent vardı. Bu nedenle iki
-şey inşa edildi:
+Console'dan gönderilen metin `/api/agent/message` üzerinden gerçek LangGraph
+backend'ine iletilir. Qwen3 yalnızca ilgili araçları görür; poliçe, hasar ve
+kart işlemlerinde doğrulanmış kurumsal API sonuçları kullanılır. Eksik poliçe,
+hasar dosyası veya müşteri numarası LangGraph doğrulamasıyla istenir.
 
-1. **Gerçek altyapı:** mikrofon izni + ses seviyesi ölçümü (`useMicrophone`),
-   transcript paneli, tool activity paneli.
-2. **Geçici bir "scripted demo agent"** (`src/lib/demoAgent.ts`): LLM
-   kullanmayan, anahtar kelime/regex tabanlı basit bir state machine. Amacı
-   sahte akıl yürütme yapmak değil — `backend/`'deki gerçek LangGraph
-   agent'ının oturacağı **plumbing'i** (API route → tool call →
-   mock-enterprise → UI'da transcript + tool activity) gerçek ve çalışır
-   halde kanıtlamaktır.
-
-**`backend/` servisi bağımsız ve tamamen gerçek** (LangGraph + Ollama/Qwen,
-kendi test paketiyle doğrulandı — bkz. `backend/README.md`) ama bu frontend
-onunla değil, hâlâ `demoAgent.ts` ile konuşuyor: kök `README.md`'de belirtildiği
-gibi, fazlar arasındaki orkestrasyon kablolaması bilinçli olarak kapsam
-dışı bırakıldı. `/dashboard` sayfası `backend`'in `/metrics`'ini doğrudan
-okuduğu için, `backend`'e `curl` ile gerçek bir sohbet gönderirseniz (bkz.
-kök README "Faz 4" bölümü) o trafiği Dashboard'da canlı görürsünüz —
-Console üzerinden değil.
+AI yanıtı `/api/voice/synthesize` üzerinden Türkçe Piper modeline gönderilir
+ve tarayıcıda otomatik oynatılır. Tarayıcı otomatik oynatmayı engellerse mesajın
+altındaki **Dinle** düğmesi kullanılır. `src/lib/demoAgent.ts` yalnızca eski
+Faz 2 akışını belgelemek için tutulur; çalışan Console yolu bu dosyayı kullanmaz.
 
 ## Desteklenen senaryolar (spec §34)
 
@@ -175,7 +162,7 @@ src/
     ├── serviceConfig.ts              # servis URL'leri: env varsayılanı + cookie override
     ├── mockApi.ts                    # mock-enterprise REST client + tool-call timing
     ├── prometheusParser.ts           # Prometheus text exposition format parser
-    ├── demoAgent.ts                  # Console'un scripted agent'ı (bkz. yukarıdaki not)
+    ├── demoAgent.ts                  # Kullanılmayan eski Faz 2 demo akışı
     └── sessionStore.ts               # process-in-memory conversation state
 ```
 
@@ -183,13 +170,8 @@ src/
 
 - **Session store process-in-memory'dir** — yalnızca tek instance'ta çalışır,
   yeniden başlatınca sıfırlanır.
-- **Console gerçek bir NLU/LLM kullanmaz** — `demoAgent.ts` basit anahtar
-  kelime eşlemesi kullanır. `backend/`'deki gerçek LangGraph agent'ı ayrı ve
-  tamamen fonksiyonel bir servistir, ancak Console ona bağlı değildir (bkz.
-  yukarıdaki mimari notu). Workflow sayfaları bu sınırlamadan etkilenmez —
-  onlar doğrudan gerçek REST API'lere gider.
-- **Ses tek yönlü ölçüm** — mikrofon seviyesi gösterilir ama STT'ye
-  gönderilmez.
+- **Ses girişi henüz metne çevrilmez** — mikrofon seviyesi gösterilir; mesaj
+  metin olarak gönderilir ve AI yanıtı sesli olarak alınır.
 - **Dashboard, Grafana'nın yerini almaz** — `monitoring/`'deki gerçek
   Prometheus/Grafana kurulumu çok daha fazla panel ve geçmiş veri sunar;
   `/dashboard` sayfası servisleri ayrıca kurmadan hızlı bir sağlık/metrik

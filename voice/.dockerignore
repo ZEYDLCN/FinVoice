@@ -1,0 +1,4 @@
+__pycache__/
+.pytest_cache/
+.piper_cache/
+tts/models/en-us-lessac-low.onnx*

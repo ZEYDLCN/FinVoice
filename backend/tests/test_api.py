@@ -41,7 +41,11 @@ def test_chat_tool_call_then_reply(mock_enterprise):
     resp = client.post("/v1/chat", json={"sessionId": "s1", "text": "TR-92831 poliçemi kontrol et"})
     assert resp.status_code == 200
     body = resp.json()
-    assert body["reply"] == "Poliçeniz aktif görünüyor."
+    assert body["reply"] == (
+        "TR-92831 numaralı poliçeniz aktif. "
+        "Geçerlilik tarihi: 2026-01-01 - 2026-12-31."
+    )
+    assert body["responseMode"] == "llm"
     assert len(body["toolCalls"]) == 1
     assert body["toolCalls"][0]["name"] == "get_policy"
     assert body["handoff"] is None

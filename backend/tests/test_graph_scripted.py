@@ -70,7 +70,16 @@ async def test_multi_tool_call_create_claim_flow(mock_enterprise):
     tool_log: list[dict] = []
 
     result = await graph.ainvoke(
-        {"messages": [HumanMessage(content="Kaza yaptım, hasar dosyası açar mısın?")]},
+        {
+            "messages": [
+                HumanMessage(
+                    content=(
+                        "TR-92831 poliçemle 2026-09-10 tarihinde İstanbul'da kaza yaptım; "
+                        "arkadan çarpıldım. Hasar dosyası açar mısın?"
+                    )
+                )
+            ]
+        },
         config={"configurable": {"thread_id": "t2", "tool_log": tool_log, "handoff_box": {}}},
     )
 
@@ -188,12 +197,33 @@ async def test_memory_persists_across_turns_for_same_thread():
     graph = build_graph(model)
     cfg = {"configurable": {"thread_id": "same-thread", "tool_log": [], "handoff_box": {}}}
 
-    await graph.ainvoke({"messages": [HumanMessage(content="Merhaba")]}, config=cfg)
+    await graph.ainvoke({"messages": [HumanMessage(content="Bir sorum var.")]}, config=cfg)
     result = await graph.ainvoke(
-        {"messages": [HumanMessage(content="Hasar dosyası açmak istiyorum")]}, config=cfg
+        {"messages": [HumanMessage(content="Bir sorum daha var.")]}, config=cfg
     )
 
     assert len(result["messages"]) == 4  # 2 human + 2 ai, both turns
+
+
+async def test_preflight_keeps_common_turkish_replies_natural_and_does_not_call_llm():
+    model = ScriptedChatModel(responses=[])
+    graph = build_graph(model)
+    cfg = {"configurable": {"thread_id": "preflight", "tool_log": [], "handoff_box": {}}}
+
+    greeting = await graph.ainvoke({"messages": [HumanMessage(content="SELAM")]}, config=cfg)
+    claim = await graph.ainvoke(
+        {"messages": [HumanMessage(content="Hasar dosyamın durumunu öğrenmek istiyorum.")]},
+        config=cfg,
+    )
+    coverage = await graph.ainvoke(
+        {"messages": [HumanMessage(content="Kaskom çekici hizmetini kapsıyor mu?")]},
+        config=cfg,
+    )
+
+    assert greeting["messages"][-1].content == "Merhaba! Size nasıl yardımcı olabilirim?"
+    assert "hasar dosya numaranızı" in claim["messages"][-1].content.lower()
+    assert "poliçe numaranızı" in coverage["messages"][-1].content.lower()
+    assert coverage["response_mode"] == "validation"
 
 
 async def test_rag_tool_call_for_unstructured_policy_question(mock_rag):

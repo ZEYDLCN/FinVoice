@@ -108,7 +108,16 @@ async def test_multiple_tool_calls_produce_multiple_spans(span_exporter, mock_en
     graph = build_graph(model)
 
     await graph.ainvoke(
-        {"messages": [HumanMessage(content="Kaza yaptım, hasar dosyası açar mısın?")]},
+            {
+                "messages": [
+                    HumanMessage(
+                        content=(
+                            "TR-92831 poliçemle 2026-09-10 tarihinde İstanbul'da kaza yaptım; "
+                            "arkadan çarpıldım. Hasar dosyası açar mısın?"
+                        )
+                    )
+                ]
+            },
         config={"configurable": {"thread_id": "trace-t3", "tool_log": [], "handoff_box": {}}},
     )
 

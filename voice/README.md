@@ -112,7 +112,7 @@ sözleşmesi) test etmeye devam eder.
 | `VAD_MIN_SILENCE_DURATION_MS` | `100` | segment sonu için beklenecek sessizlik |
 | `VAD_SPEECH_PAD_MS` | `30` | segment kenarlarına eklenen pay |
 | `TTS_BACKEND` | `piper` | `fake` → model yüklemeden sessiz WAV (test/CI) |
-| `PIPER_VOICE_PATH` | `voice/tts/models/en-us-lessac-low.onnx` | `.onnx` ses model dosyasının yolu |
+| `PIPER_VOICE_PATH` | `voice/tts/models/tr_TR-dfki-medium.onnx` | `.onnx` ses model dosyasının yolu |
 
 ## Testler
 

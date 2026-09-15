@@ -19,6 +19,7 @@ so the question reaches the user.
 """
 from __future__ import annotations
 
+import re
 import time
 from typing import Any, Optional
 
@@ -34,19 +35,135 @@ from backend.agents.guardrails import detect_hard_handoff_trigger
 from backend.agents.prompts import SYSTEM_PROMPT
 from backend.observability.tracing import get_tracer
 from backend.tools.handoff_tools import HANDOFF_TOOL_NAME
-from backend.tools.registry import ALL_TOOLS, TOOLS_BY_NAME
+from backend.tools.registry import TOOLS_BY_NAME
 
 
 class AgentState(MessagesState):
-    """Just the message history — LangGraph's `add_messages` reducer
-    handles appending across turns and across the agent<->tools loop."""
+    """Conversation messages plus the source of the final response."""
+
+    response_mode: str
+
+
+def _latest_human_text(messages: list) -> str:
+    for message in reversed(messages):
+        if isinstance(message, HumanMessage) and isinstance(message.content, str):
+            return message.content.strip()
+    return ""
+
+
+def _preflight_reply(messages: list) -> Optional[str]:
+    """Handle safety-critical missing slots before a small local LLM can invent them."""
+    text = _latest_human_text(messages)
+    normalized = text.lower().strip(" !.,?")
+
+    if normalized in {"merhaba", "selam", "selamlar", "günaydın", "iyi akşamlar"}:
+        return "Merhaba! Size nasıl yardımcı olabilirim?"
+    if normalized in {"nasılsın", "nasilsin", "naber", "iyi misin"}:
+        return "Teşekkür ederim, iyiyim. Size nasıl yardımcı olabilirim?"
+
+    has_claim_id = re.search(r"\bclm-\d+\b", normalized, re.IGNORECASE) is not None
+    asks_claim_status = "hasar" in normalized and any(
+        phrase in normalized for phrase in ("durum", "sorgu", "ne aşamada", "sonuç")
+    )
+    if asks_claim_status and not has_claim_id:
+        return "Elbette. Hasar dosya numaranızı paylaşır mısınız? Örneğin, CLM-98221."
+
+    has_policy_id = re.search(r"\btr-\d+\b", normalized, re.IGNORECASE) is not None
+    asks_personal_coverage = any(word in normalized for word in ("kaskom", "poliçem", "policem")) and any(
+        word in normalized
+        for word in ("kapsıyor", "kapsiyor", "teminat", "çekici", "cekici", "ikame")
+    )
+    if asks_personal_coverage and not has_policy_id:
+        return "Kontrol edebilmem için poliçe numaranızı paylaşır mısınız? Örneğin, TR-92831."
+
+    reports_lost_card = "kart" in normalized and any(
+        phrase in normalized for phrase in ("kaybett", "kayıp", "çalınd", "calind")
+    )
+    if reports_lost_card and "cust-" not in normalized:
+        return "Kartınızı güvenle kontrol edebilmem için müşteri numaranızı paylaşır mısınız? Örneğin, CUST-1001."
+
+    wants_new_claim = "hasar" in normalized and any(
+        phrase in normalized for phrase in ("dosyası aç", "dosyasi ac", "kayd", "oluştur", "olustur", "kaza")
+    )
+    if wants_new_claim and not has_policy_id:
+        return "Hasar dosyasını başlatabilmem için poliçe numaranızı paylaşır mısınız? Örneğin, TR-92831."
+
+    return None
+
+
+def _named_tools(*names: str) -> list:
+    return [TOOLS_BY_NAME[name] for name in names if name in TOOLS_BY_NAME]
+
+
+def _tools_for_conversation(messages: list) -> list:
+    """Expose only the tools relevant to the latest conversation flow."""
+    human_texts = [
+        message.content.lower()
+        for message in messages
+        if isinstance(message, HumanMessage) and isinstance(message.content, str)
+    ]
+    if not human_texts:
+        return _named_tools(HANDOFF_TOOL_NAME)
+
+    latest = human_texts[-1].strip(" !.,?")
+    if latest in {
+        "merhaba",
+        "selam",
+        "selamlar",
+        "nasılsın",
+        "nasilsin",
+        "naber",
+        "iyi misin",
+        "günaydın",
+        "iyi akşamlar",
+    }:
+        return []
+
+    for text in reversed(human_texts):
+        if any(word in text for word in ("kart", "card", "cust-", "dolandır", "tanımadığım işlem")):
+            return _named_tools(
+                "get_customer",
+                "get_cards",
+                "freeze_card",
+                "request_new_card",
+                HANDOFF_TOOL_NAME,
+            )
+        if "clm-" in text or (
+            "hasar" in text
+            and any(word in text for word in ("durum", "sorgu", "ne aşamada", "sonuç"))
+        ):
+            return _named_tools("get_claim_status", HANDOFF_TOOL_NAME)
+        if any(
+            word in text
+            for word in (
+                "kapsıyor",
+                "kapsiyor",
+                "teminat",
+                "çekici",
+                "cekici",
+                "ikame araç",
+                "deprem",
+                "yangın",
+                "hırsızlık",
+            )
+        ):
+            return _named_tools(
+                "get_policy",
+                "check_policy_coverage",
+                "search_policy_documents",
+                HANDOFF_TOOL_NAME,
+            )
+        if any(word in text for word in ("kaza", "hasar dosyası aç", "hasar kaydı", "hasar oluştur")):
+            return _named_tools("get_policy", "create_claim", HANDOFF_TOOL_NAME)
+        if "poliçe" in text or "police" in text or "tr-" in text:
+            return _named_tools("get_policy", HANDOFF_TOOL_NAME)
+
+    return _named_tools("search_policy_documents", HANDOFF_TOOL_NAME)
 
 
 def build_graph(model: BaseChatModel, checkpointer: Optional[BaseCheckpointSaver] = None):
     """Compiles the agent graph, binding `model` (real ChatOllama in
     production, ScriptedChatModel in tests) with the tool registry once."""
-    bound_model = model.bind_tools(ALL_TOOLS)
-
     async def intake_node(state: AgentState, config: RunnableConfig) -> dict:
         last = state["messages"][-1]
         if isinstance(last, HumanMessage) and isinstance(last.content, str):
@@ -59,10 +176,18 @@ def build_graph(model: BaseChatModel, checkpointer: Optional[BaseCheckpointSaver
 
     async def agent_node(state: AgentState) -> dict:
         messages = state["messages"]
+        preflight_reply = _preflight_reply(messages)
+        if preflight_reply is not None:
+            return {
+                "messages": [AIMessage(content=preflight_reply)],
+                "response_mode": "validation",
+            }
         if not messages or not isinstance(messages[0], SystemMessage):
             messages = [SystemMessage(content=SYSTEM_PROMPT), *messages]
-        response = await bound_model.ainvoke(messages)
-        return {"messages": [response]}
+        eligible_tools = _tools_for_conversation(messages)
+        chat_model = model.bind_tools(eligible_tools) if eligible_tools else model
+        response = await chat_model.ainvoke(messages)
+        return {"messages": [response], "response_mode": "llm"}
 
     async def tools_node(state: AgentState, config: RunnableConfig) -> dict:
         last = state["messages"][-1]

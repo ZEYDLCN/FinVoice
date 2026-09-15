@@ -74,7 +74,7 @@ POST /v1/chat {sessionId, text}
 
 ```bash
 # ollama.com'dan kurun, sonra:
-ollama pull qwen2.5:7b
+ollama pull qwen3:1.7b
 ollama serve   # varsayılan: http://localhost:11434
 ```
 
@@ -121,7 +121,7 @@ Bu proje bir agent sandbox'ında geliştirildi ve `ollama.com` /
   `FINVOICE_AGENT_LLM_BACKEND=fake` ile canlı `curl` isteğiyle doğrulandı —
   Faz 7'nin guardrail'i (açık temsilci talebi, öfke tespiti) ve handoff
   dossier'ının hatasız düşmesi (özetleme başarısız olsa bile) dahil.
-- ❌ **Gerçek Qwen/Ollama çağrısı** bu sandbox'ta doğrulanamadı (ağ engeli).
+- ✅ **Gerçek Qwen3/Ollama çağrısı** yerel Docker ortamında araç çağrısıyla doğrulandı.
   Kod doğru ve standart `langchain_ollama.ChatOllama` entegrasyonunu
   kullanıyor; normal bir geliştirme makinesinde/CI'da Ollama kuruluyken
   çalışması beklenir.
@@ -201,7 +201,7 @@ backend/
 | `RAG_SERVICE_URL` | `http://localhost:8300` | Faz 6 RAG servisi adresi |
 | `FINVOICE_AGENT_LLM_BACKEND` | `ollama` | `fake` → Ollama olmadan smoke-test |
 | `FINVOICE_AGENT_OLLAMA_HOST` | `http://localhost:11434` | Ollama sunucu adresi |
-| `FINVOICE_AGENT_AGENT_MODEL` | `qwen2.5:7b` | Ollama model adı |
+| `FINVOICE_AGENT_AGENT_MODEL` | `qwen3:1.7b` | Ollama model adı |
 | `FINVOICE_AGENT_AGENT_TEMPERATURE` | `0.2` | LLM sampling sıcaklığı |
 
 ## Sıradaki adım (frontend entegrasyonu)

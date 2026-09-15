@@ -18,7 +18,7 @@ ENV FINVOICE_VOICE_WHISPER_MODEL=tiny
 # FINVOICE_VOICE_TTS_BACKEND=fake to run without TTS. See
 # voice/tts/models/README.md for how to fetch a voice.
 ENV FINVOICE_VOICE_TTS_BACKEND=piper
-ENV FINVOICE_VOICE_PIPER_VOICE_PATH=/app/voice/tts/models/en-us-lessac-low.onnx
+ENV FINVOICE_VOICE_PIPER_VOICE_PATH=/app/voice/tts/models/tr_TR-dfki-medium.onnx
 
 EXPOSE 8100
 
