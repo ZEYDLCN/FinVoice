@@ -27,7 +27,7 @@ function Wrapper({
 }
 
 const inputClass =
-  "w-full rounded-lg border border-[var(--border-strong)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--text-primary)] outline-none transition-colors placeholder:text-[var(--text-muted)] focus:border-[var(--brand)] disabled:opacity-50";
+  "w-full rounded-xl border border-[var(--border-strong)] bg-[var(--surface-hover)] px-3.5 py-2.5 text-sm text-[var(--text-primary)] outline-none transition-all placeholder:text-[var(--text-muted)] focus:border-[var(--brand)] focus:ring-4 focus:ring-[var(--brand-soft)] disabled:opacity-50";
 
 export function TextField({
   label,

@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { AppShell } from "@/components/layout/AppShell";
 import "./globals.css";
@@ -14,9 +14,14 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "FinVoice Ops",
+  title: "FinVoice — Voice AI Operations",
   description:
     "Bankacılık ve sigorta operasyonları için gerçek zamanlı Voice AI automation platformu.",
+};
+
+export const viewport: Viewport = {
+  themeColor: "#070b09",
+  colorScheme: "dark",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

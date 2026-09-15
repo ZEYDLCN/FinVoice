@@ -35,7 +35,7 @@ export function StatTile({
         )}
         <div className="min-w-0">
           <div className="text-xs font-medium text-[var(--text-secondary)]">{label}</div>
-          <div className="truncate text-2xl font-semibold tracking-tight text-[var(--text-primary)]">
+          <div className="truncate text-2xl font-medium tracking-[-0.04em] text-[var(--text-primary)] md:text-3xl">
             {value}
           </div>
         </div>

@@ -1,60 +1,38 @@
 "use client";
 
-import { Mic, MicOff } from "lucide-react";
+import { Mic, MicOff, Radio } from "lucide-react";
 import { useMicrophone } from "@/hooks/useMicrophone";
 
-const BAR_COUNT = 12;
+const BAR_COUNT = 18;
 
 export function MicVisualizer() {
   const { status, level, error, start, stop } = useMicrophone();
   const isActive = status === "granted";
 
   return (
-    <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 shadow-[var(--shadow-sm)]">
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-sm font-semibold text-[var(--text-primary)]">Voice Gateway</h3>
-          <p className="text-xs text-[var(--text-muted)]">
-            Ses seviyesi ölçümü — gerçek VAD/STT boru hattı{" "}
-            <code className="text-[var(--text-secondary)]">voice/</code> servisinde çalışıyor
-          </p>
+    <div className="ambient-card glass-panel grid min-h-40 gap-5 rounded-[24px] p-5 sm:grid-cols-[1fr_auto] sm:items-center md:p-6">
+      <div>
+        <div className="mb-3 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--brand)]"><Radio className="h-3.5 w-3.5" /> Voice Gateway</div>
+        <h3 className="text-xl font-medium tracking-[-0.035em] text-[var(--text-primary)]">Sesinizi duymaya hazır.</h3>
+        <p className="mt-2 max-w-lg text-xs leading-5 text-[var(--text-secondary)]">Mikrofon seviyesini canlı izleyin veya aşağıdaki alandan mesajınızı yazın.</p>
+        <div className="mt-5 flex h-9 items-center gap-1">
+          {Array.from({ length: BAR_COUNT }).map((_, index) => {
+            const distance = Math.abs(index - (BAR_COUNT - 1) / 2);
+            const shapeHeight = 10 + (1 - distance / (BAR_COUNT / 2)) * 22;
+            const on = isActive && level > index / BAR_COUNT;
+            return <span key={index} className={`w-1 rounded-full transition-all duration-75 ${on ? "bg-[var(--brand)] shadow-[0_0_8px_var(--brand)]" : "bg-[var(--border-strong)]"}`} style={{ height: on ? Math.max(shapeHeight, level * 38) : shapeHeight * 0.55 }} />;
+          })}
         </div>
-        <button
-          onClick={isActive ? stop : start}
-          className={`inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
-            isActive
-              ? "bg-[var(--danger)] text-white hover:opacity-90"
-              : "bg-[var(--brand)] text-white hover:bg-[var(--brand-hover)]"
-          }`}
-        >
-          {isActive ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
-          {isActive ? "Durdur" : "Mikrofonu Aç"}
-        </button>
+        <p className="mt-2 text-[10px] text-[var(--text-muted)]">
+          {status === "idle" && "Mikrofon kapalı · Metinle devam edebilirsiniz"}
+          {status === "requesting" && "Mikrofon izni bekleniyor..."}
+          {status === "granted" && "Mikrofon açık · Ses seviyesi izleniyor"}
+          {(status === "denied" || status === "error") && (error ?? "Mikrofona erişilemedi")}
+        </p>
       </div>
-
-      <div className="mt-4 flex h-12 items-end justify-center gap-1">
-        {Array.from({ length: BAR_COUNT }).map((_, i) => {
-          const threshold = i / BAR_COUNT;
-          const on = isActive && level > threshold;
-          return (
-            <div
-              key={i}
-              className={`w-2 rounded-sm transition-all duration-75 ${
-                on ? "bg-[var(--accent)]" : "bg-[var(--surface-hover)]"
-              }`}
-              style={{ height: on ? `${20 + threshold * 80}%` : "15%" }}
-            />
-          );
-        })}
-      </div>
-
-      <p className="mt-2 text-center text-xs text-[var(--text-muted)]">
-        {status === "idle" && "Mikrofon kapalı — aşağıdaki metin kutusunu kullanın."}
-        {status === "requesting" && "İzin isteniyor..."}
-        {status === "granted" && "Dinleniyor (bu konsolda yalnızca seviye ölçümü)"}
-        {status === "denied" && (error ?? "Mikrofon izni reddedildi.")}
-        {status === "error" && (error ?? "Bir hata oluştu.")}
-      </p>
+      <button onClick={isActive ? stop : start} className={`relative flex h-20 w-20 items-center justify-center justify-self-center rounded-full transition duration-300 ${isActive ? "bg-[var(--danger)] text-white" : "bg-[var(--brand)] text-[var(--brand-ink)] shadow-[0_0_0_12px_var(--brand-soft),0_20px_45px_rgba(130,243,170,.18)] hover:scale-105"}`} aria-label={isActive ? "Mikrofonu kapat" : "Mikrofonu aç"}>
+        {isActive ? <MicOff className="h-7 w-7" /> : <Mic className="h-7 w-7" />}
+      </button>
     </div>
   );
 }

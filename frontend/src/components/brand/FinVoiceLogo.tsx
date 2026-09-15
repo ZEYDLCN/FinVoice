@@ -1,0 +1,19 @@
+import type { SVGProps } from "react";
+
+export function FinVoiceLogo({ className = "h-10 w-10", ...props }: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 64 64" className={className} role="img" aria-label="FinVoice" {...props}>
+      <defs>
+        <linearGradient id="finvoice-mark" x1="10" y1="8" x2="54" y2="56">
+          <stop stopColor="#C8FF72" />
+          <stop offset="0.48" stopColor="#78F5AD" />
+          <stop offset="1" stopColor="#35DDE0" />
+        </linearGradient>
+      </defs>
+      <rect width="64" height="64" rx="19" fill="#0A0F0C" />
+      <rect x="1" y="1" width="62" height="62" rx="18" fill="none" stroke="#B7FFCF" strokeOpacity=".2" />
+      <path d="M14 34h7l3.2-10 6.1 21 5.2-27 4.2 16H50" fill="none" stroke="url(#finvoice-mark)" strokeWidth="4.5" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx="50" cy="34" r="3.5" fill="#C8FF72" />
+    </svg>
+  );
+}

@@ -45,7 +45,7 @@ export async function POST(req: Request) {
       reply: string;
       toolCalls?: unknown[];
       handoff?: unknown;
-      responseMode?: "llm" | "validation" | "guardrail";
+      responseMode?: "llm" | "tool" | "validation" | "guardrail";
     };
     return NextResponse.json({
       reply: response.reply,

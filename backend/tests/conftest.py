@@ -36,10 +36,22 @@ def mock_enterprise():
     with respx.mock(base_url=MOCK_BASE, assert_all_called=False) as router:
         router.get("/api/policies/TR-92831").mock(return_value=Response(200, json=POLICY_ACTIVE))
         router.get("/api/policies/TR-10442").mock(return_value=Response(200, json=POLICY_EXPIRED))
+        router.get("/api/policies/TR-92831/coverage").mock(
+            return_value=Response(
+                200,
+                json={
+                    "policyNumber": "TR-92831",
+                    "topic": "towing",
+                    "covered": True,
+                    "detail": "FULL_CASCO teminatı towing kapsamını içeriyor.",
+                },
+            )
+        )
         router.get("/api/policies/UNKNOWN").mock(
             return_value=Response(404, json={"detail": "Policy 'UNKNOWN' not found"})
         )
         router.post("/api/claims").mock(return_value=Response(201, json=CLAIM_CREATED))
+        router.get("/api/claims/CLM-98221").mock(return_value=Response(200, json=CLAIM_CREATED))
         yield router
 
 

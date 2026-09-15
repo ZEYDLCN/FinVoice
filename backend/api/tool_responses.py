@@ -27,6 +27,14 @@ CARD_STATUS = {
 
 CARD_TYPE = {"CREDIT": "kredi kartı", "DEBIT": "banka kartı"}
 
+COVERAGE_TOPIC_OBJECT = {
+    "towing": "çekici hizmetini",
+    "glass": "cam hasarını",
+    "theft": "hırsızlığı",
+    "fire": "yangın hasarını",
+    "collision": "çarpışma hasarını",
+}
+
 
 def _last_successful(tool_log: list[dict[str, Any]]) -> Optional[dict[str, Any]]:
     for entry in reversed(tool_log):
@@ -54,8 +62,11 @@ def format_verified_tool_reply(tool_log: list[dict[str, Any]]) -> Optional[str]:
 
     if name == "check_policy_coverage" and isinstance(output, dict):
         number = output.get("policyNumber", "Poliçeniz")
-        topic = output.get("topic", "sorduğunuz")
+        topic = str(output.get("topic", "sorduğunuz"))
         verb = "kapsıyor" if output.get("covered") else "kapsamıyor"
+        topic_object = COVERAGE_TOPIC_OBJECT.get(topic.lower())
+        if topic_object is not None:
+            return f"{number} numaralı poliçeniz {topic_object} {verb}."
         return f"{number} numaralı poliçeniz '{topic}' teminatını {verb}."
 
     if name in {"create_claim", "get_claim_status"} and isinstance(output, dict):

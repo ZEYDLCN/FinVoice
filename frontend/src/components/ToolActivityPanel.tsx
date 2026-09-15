@@ -22,24 +22,26 @@ export function ToolActivityPanel({
   confidence: number | null;
   toolCalls: ToolCallLogEntry[];
   handoff: HandoffContext | null;
-  responseMode: "llm" | "validation" | "guardrail" | "scripted";
+  responseMode: "llm" | "tool" | "validation" | "guardrail" | "scripted";
 }) {
   return (
-    <div className="flex h-full flex-col rounded-xl border border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow-sm)]">
-      <div className="flex items-center gap-2 border-b border-[var(--border)] px-4 py-3">
-        <Activity className="h-4 w-4 text-[var(--text-muted)]" />
-        <h2 className="text-sm font-semibold text-[var(--text-primary)]">Tool Activity</h2>
+    <div className="glass-panel flex h-full flex-col overflow-hidden rounded-[24px]">
+      <div className="flex items-center gap-2 border-b border-[var(--border)] px-5 py-4">
+        <Activity className="h-4 w-4 text-[var(--accent)]" />
+        <h2 className="text-sm font-semibold text-[var(--text-primary)]">AI aktivitesi</h2>
       </div>
 
-      <div className="finvoice-scroll space-y-4 overflow-y-auto px-4 py-4">
-        <div>
+      <div className="finvoice-scroll space-y-5 overflow-y-auto px-5 py-5">
+        <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-hover)] p-4">
           <div className="text-[10px] uppercase tracking-wide text-[var(--text-muted)]">
-            Intent
+            Yanıt kaynağı
           </div>
-          <div className="text-sm text-[var(--text-primary)]">
+          <div className="mt-1.5 text-sm font-medium text-[var(--text-primary)]">
             {intent
               ? INTENT_LABELS[intent]
-              : responseMode === "validation"
+              : responseMode === "tool"
+                ? "LangGraph + kurumsal API"
+                : responseMode === "validation"
                 ? "LangGraph alan doğrulaması"
                 : responseMode === "guardrail"
                   ? "Güvenlik kuralı"
@@ -56,16 +58,16 @@ export function ToolActivityPanel({
 
         <div>
           <div className="mb-2 text-[10px] uppercase tracking-wide text-[var(--text-muted)]">
-            Tools
+            Kullanılan araçlar
           </div>
           {toolCalls.length === 0 && (
-            <p className="text-xs text-[var(--text-muted)]">Henüz bir tool çağrısı yok.</p>
+            <p className="rounded-xl border border-dashed border-[var(--border-strong)] px-3 py-4 text-center text-xs text-[var(--text-muted)]">Bu turda araç çağrısı yok.</p>
           )}
           <ul className="space-y-2">
             {toolCalls.map((tc) => (
               <li
                 key={tc.id}
-                className="rounded-lg border border-[var(--border)] bg-[var(--surface-hover)] px-3 py-2"
+                className="rounded-xl border border-[var(--border)] bg-[var(--surface-hover)] px-3.5 py-3"
               >
                 <div className="flex items-center justify-between">
                   <span className="flex items-center gap-1.5 text-sm text-[var(--text-primary)]">

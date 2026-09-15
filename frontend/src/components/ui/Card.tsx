@@ -8,8 +8,8 @@ export function Card({
 }: HTMLAttributes<HTMLDivElement> & { children: ReactNode; padded?: boolean }) {
   return (
     <div
-      className={`rounded-xl border border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow-sm)] ${
-        padded ? "p-5" : ""
+      className={`glass-panel rounded-[22px] ${
+        padded ? "p-5 md:p-6" : ""
       } ${className}`}
       {...rest}
     >
@@ -30,9 +30,9 @@ export function CardHeader({
   return (
     <div className="mb-4 flex items-start justify-between gap-3">
       <div>
-        <h3 className="text-sm font-semibold text-[var(--text-primary)]">{title}</h3>
+        <h3 className="text-sm font-semibold tracking-[-0.01em] text-[var(--text-primary)]">{title}</h3>
         {description && (
-          <p className="mt-0.5 text-xs text-[var(--text-secondary)]">{description}</p>
+          <p className="mt-1 max-w-xl text-xs leading-relaxed text-[var(--text-secondary)]">{description}</p>
         )}
       </div>
       {action}

@@ -1,99 +1,61 @@
 @import "tailwindcss";
 
 :root {
-  /* Surfaces */
-  --bg: #f6f7fb;
-  --surface: #ffffff;
+  --bg: #070b09;
+  --surface: #0e1511;
+  --surface-raised: #141d18;
+  --surface-hover: #1a2720;
+  --border: rgba(183, 255, 207, 0.11);
+  --border-strong: rgba(183, 255, 207, 0.22);
+  --text-primary: #f2f8f4;
+  --text-secondary: #a4b5aa;
+  --text-muted: #68796f;
+  --brand: #82f3aa;
+  --brand-hover: #a4ffc1;
+  --brand-soft: rgba(130, 243, 170, 0.12);
+  --brand-ink: #07110b;
+  --accent: #42dfe0;
+  --accent-soft: rgba(66, 223, 224, 0.11);
+  --success: #82f3aa;
+  --success-soft: rgba(130, 243, 170, 0.11);
+  --warning: #f2c96d;
+  --warning-soft: rgba(242, 201, 109, 0.11);
+  --danger: #ff7d8e;
+  --danger-soft: rgba(255, 125, 142, 0.11);
+  --info: #73b7ff;
+  --info-soft: rgba(115, 183, 255, 0.11);
+  --shadow-sm: 0 1px 1px rgba(0, 0, 0, 0.24);
+  --shadow-md: 0 18px 55px rgba(0, 0, 0, 0.28);
+  --shadow-lg: 0 30px 90px rgba(0, 0, 0, 0.48);
+}
+
+:root[data-theme="light"] {
+  --bg: #eef9f2;
+  --surface: rgba(255, 255, 255, 0.86);
   --surface-raised: #ffffff;
-  --surface-hover: #eef1f8;
-  --border: #e2e5ee;
-  --border-strong: #cbd0dd;
-
-  /* Text */
-  --text-primary: #12162a;
-  --text-secondary: #565f78;
-  --text-muted: #8991a8;
-
-  /* Brand */
-  --brand: #3454d1;
-  --brand-hover: #2941ac;
-  --brand-soft: #eaefff;
-  --accent: #0f9d8f;
-  --accent-soft: #e3f7f4;
-
-  /* Semantic */
-  --success: #12875a;
-  --success-soft: #e4f7ee;
-  --warning: #b5750a;
-  --warning-soft: #fdf1de;
-  --danger: #c22b3f;
-  --danger-soft: #fbe8ea;
-  --info: #2565c7;
-  --info-soft: #e7f0fd;
-
-  --shadow-sm: 0 1px 2px rgba(16, 24, 48, 0.06);
-  --shadow-md: 0 4px 16px rgba(16, 24, 48, 0.08);
-  --shadow-lg: 0 12px 32px rgba(16, 24, 48, 0.12);
-}
-
-:root[data-theme="dark"],
-:root:not([data-theme="light"]) {
-  --bg: #0a0d16;
-  --surface: #10141f;
-  --surface-raised: #141926;
-  --surface-hover: #1a2032;
-  --border: #232a3d;
-  --border-strong: #323b54;
-
-  --text-primary: #eef1f8;
-  --text-secondary: #97a1bd;
-  --text-muted: #626d8a;
-
-  --brand: #6d8bff;
-  --brand-hover: #8aa1ff;
-  --brand-soft: #1a2550;
-  --accent: #33d6c4;
-  --accent-soft: #123330;
-
-  --success: #3ecf8e;
-  --success-soft: #113626;
-  --warning: #f0ad4e;
-  --warning-soft: #3a2c11;
-  --danger: #f2657a;
-  --danger-soft: #3a161c;
-  --info: #5b9bf7;
-  --info-soft: #132a4a;
-
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.35);
-  --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.45);
-}
-
-@media (prefers-color-scheme: light) {
-  :root:not([data-theme]) {
-    --bg: #f6f7fb;
-    --surface: #ffffff;
-    --surface-raised: #ffffff;
-    --surface-hover: #eef1f8;
-    --border: #e2e5ee;
-    --border-strong: #cbd0dd;
-    --text-primary: #12162a;
-    --text-secondary: #565f78;
-    --text-muted: #8991a8;
-    --brand: #3454d1;
-    --brand-hover: #2941ac;
-    --brand-soft: #eaefff;
-    --accent: #0f9d8f;
-    --accent-soft: #e3f7f4;
-    --success: #12875a;
-    --success-soft: #e4f7ee;
-    --warning: #b5750a;
-    --warning-soft: #fdf1de;
-    --danger: #c22b3f;
-    --danger-soft: #fbe8ea;
-    --info: #2565c7;
-    --info-soft: #e7f0fd;
-  }
+  --surface-hover: #e5f3e9;
+  --border: rgba(15, 55, 33, 0.1);
+  --border-strong: rgba(15, 55, 33, 0.18);
+  --text-primary: #0b1b12;
+  --text-secondary: #4b6254;
+  --text-muted: #7a9182;
+  --brand: #16945a;
+  --brand-hover: #087b47;
+  --brand-soft: rgba(22, 148, 90, 0.1);
+  --brand-ink: #ffffff;
+  --accent: #0da7ad;
+  --accent-soft: rgba(13, 167, 173, 0.1);
+  --success: #168653;
+  --success-soft: #e1f6e9;
+  --warning: #a86a07;
+  --warning-soft: #fff3d8;
+  --danger: #c83851;
+  --danger-soft: #fde8ec;
+  --info: #2e6fc5;
+  --info-soft: #e5f0ff;
+  --shadow-sm: 0 1px 2px rgba(10, 40, 22, 0.06);
+  --shadow-md: 0 18px 50px rgba(10, 40, 22, 0.1);
+  --shadow-lg: 0 30px 80px rgba(10, 40, 22, 0.16);
 }
 
 @theme inline {
@@ -123,34 +85,34 @@
   --font-mono: var(--font-geist-mono);
 }
 
-* {
-  border-color: var(--border);
-}
-
-html {
-  color-scheme: light dark;
-}
-
+* { border-color: var(--border); }
+html { color-scheme: dark; background: var(--bg); }
 body {
-  background: var(--bg);
+  min-height: 100vh;
+  background: radial-gradient(circle at 8% 2%, rgba(66, 223, 224, 0.13), transparent 28rem), radial-gradient(circle at 96% 8%, rgba(130, 243, 170, 0.12), transparent 32rem), var(--bg);
   color: var(--text-primary);
   font-family: var(--font-sans), Arial, Helvetica, sans-serif;
 }
-
-::selection {
-  background: var(--brand-soft);
-  color: var(--text-primary);
+body::before {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  content: "";
+  opacity: 0.2;
+  background-image: linear-gradient(rgba(130, 243, 170, 0.035) 1px, transparent 1px), linear-gradient(90deg, rgba(130, 243, 170, 0.035) 1px, transparent 1px);
+  background-size: 44px 44px;
+  mask-image: linear-gradient(to bottom, black, transparent 72%);
 }
-
-/* Thin, unobtrusive scrollbars for the console panels */
-.finvoice-scroll::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-.finvoice-scroll::-webkit-scrollbar-track {
-  background: transparent;
-}
-.finvoice-scroll::-webkit-scrollbar-thumb {
-  background: var(--border-strong);
-  border-radius: 8px;
-}
+button, a { -webkit-tap-highlight-color: transparent; }
+button:not(:disabled), a { cursor: pointer; }
+::selection { background: var(--brand); color: var(--brand-ink); }
+.glass-panel { border: 1px solid var(--border); background: color-mix(in srgb, var(--surface) 88%, transparent); box-shadow: var(--shadow-md); backdrop-filter: blur(22px); }
+.ambient-card { position: relative; isolation: isolate; overflow: hidden; }
+.ambient-card::after { position: absolute; right: -6rem; bottom: -8rem; z-index: -1; width: 18rem; height: 18rem; border-radius: 999px; content: ""; background: radial-gradient(circle, rgba(130, 243, 170, 0.16), transparent 66%); pointer-events: none; }
+.finvoice-scroll { scrollbar-width: thin; scrollbar-color: var(--border-strong) transparent; }
+.finvoice-scroll::-webkit-scrollbar { width: 7px; height: 7px; }
+.finvoice-scroll::-webkit-scrollbar-track { background: transparent; }
+.finvoice-scroll::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 999px; }
+@keyframes voice-pulse { 0%, 100% { transform: scale(.92); opacity: .45; } 50% { transform: scale(1.08); opacity: .9; } }
+.voice-pulse { animation: voice-pulse 2.8s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; } }

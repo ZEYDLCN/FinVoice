@@ -29,21 +29,13 @@ export function ServiceStatusStrip() {
     return <div className="h-5 w-40 animate-pulse rounded bg-[var(--surface-hover)]" />;
   }
 
+  const online = services.filter((service) => service.ok).length;
+  const allOnline = online === services.length;
+
   return (
-    <div className="flex flex-wrap items-center gap-3">
-      {services.map((s) => (
-        <div key={s.key} className="flex items-center gap-1.5" title={s.error ?? `${s.url}`}>
-          <span
-            className={`h-2 w-2 rounded-full ${
-              s.ok ? "bg-[var(--success)]" : "bg-[var(--danger)]"
-            }`}
-          />
-          <span className="hidden text-xs text-[var(--text-secondary)] sm:inline">{s.label}</span>
-          {s.ok && s.latencyMs !== null && (
-            <span className="hidden text-xs text-[var(--text-muted)] sm:inline">{s.latencyMs}ms</span>
-          )}
-        </div>
-      ))}
+    <div className="flex items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--surface-hover)] px-3 py-2" title={services.map((service) => `${service.label}: ${service.ok ? `${service.latencyMs}ms` : "çevrimdışı"}`).join(" · ")}>
+      <span className={`h-2 w-2 rounded-full ${allOnline ? "bg-[var(--success)] shadow-[0_0_10px_var(--success)]" : "bg-[var(--warning)]"}`} />
+      <span className="text-[11px] font-medium text-[var(--text-secondary)]">{online}/{services.length} sistem aktif</span>
     </div>
   );
 }

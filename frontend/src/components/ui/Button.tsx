@@ -5,7 +5,7 @@ type Size = "sm" | "md";
 
 const VARIANT_CLASSES: Record<Variant, string> = {
   primary:
-    "bg-[var(--brand)] text-white hover:bg-[var(--brand-hover)] disabled:opacity-50",
+    "bg-[var(--brand)] text-[var(--brand-ink)] shadow-[0_10px_24px_rgba(130,243,170,.12)] hover:bg-[var(--brand-hover)] disabled:opacity-50",
   secondary:
     "bg-[var(--surface-hover)] text-[var(--text-primary)] border border-[var(--border-strong)] hover:border-[var(--brand)] disabled:opacity-50",
   ghost:
@@ -33,7 +33,7 @@ export function Button({
 }) {
   return (
     <button
-      className={`inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-colors disabled:cursor-not-allowed ${VARIANT_CLASSES[variant]} ${SIZE_CLASSES[size]} ${className}`}
+      className={`inline-flex items-center justify-center gap-2 rounded-xl font-semibold transition-all duration-200 hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:hover:translate-y-0 ${VARIANT_CLASSES[variant]} ${SIZE_CLASSES[size]} ${className}`}
       {...rest}
     >
       {icon}

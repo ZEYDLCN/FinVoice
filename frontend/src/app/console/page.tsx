@@ -168,10 +168,10 @@ export default function ConsolePage() {
   return (
     <>
       <PageHeader
-        breadcrumb="Faz 4-8"
-        title="Voice Console"
-        description="LangGraph ve yerel Ollama modeliyle çalışan sesli müşteri asistanı."
-        action={<Badge tone="brand">LangGraph + Ollama</Badge>}
+        breadcrumb="AI Asistan"
+        title="Merhaba, nasıl yardımcı olabilirim?"
+        description="FinVoice ile yazılı konuşun, doğrulanmış işlemleri doğal Türkçe sesle dinleyin."
+        action={<Badge tone="brand" dot>Qwen3 + LangGraph</Badge>}
       />
       <PageBody>
         {connectionError && (
@@ -192,8 +192,8 @@ export default function ConsolePage() {
           <MicVisualizer />
         </div>
 
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-[2fr_1fr]">
-          <div className="min-h-[420px]">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.65fr)_minmax(280px,.75fr)]">
+          <div className="min-h-[460px]">
             <TranscriptPanel
               messages={messages}
               onSpeak={(message) => void speak(message)}
@@ -201,7 +201,7 @@ export default function ConsolePage() {
               voiceLoading={voiceLoading}
             />
           </div>
-          <div className="min-h-[420px]">
+          <div className="min-h-[460px]">
             <ToolActivityPanel
               intent={intent}
               confidence={confidence}

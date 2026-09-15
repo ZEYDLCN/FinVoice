@@ -22,6 +22,7 @@ from __future__ import annotations
 import re
 import time
 from typing import Any, Optional
+from uuid import uuid4
 
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
@@ -42,6 +43,7 @@ class AgentState(MessagesState):
     """Conversation messages plus the source of the final response."""
 
     response_mode: str
+    forced_structured_tool: bool
 
 
 def _latest_human_text(messages: list) -> str:
@@ -49,6 +51,15 @@ def _latest_human_text(messages: list) -> str:
         if isinstance(message, HumanMessage) and isinstance(message.content, str):
             return message.content.strip()
     return ""
+
+
+def _latest_human_identifier(messages: list, pattern: str) -> Optional[str]:
+    for message in reversed(messages):
+        if isinstance(message, HumanMessage) and isinstance(message.content, str):
+            match = re.search(pattern, message.content, re.IGNORECASE)
+            if match is not None:
+                return match.group(0).upper()
+    return None
 
 
 def _preflight_reply(messages: list) -> Optional[str]:
@@ -89,6 +100,116 @@ def _preflight_reply(messages: list) -> Optional[str]:
         return "Hasar dosyasını başlatabilmem için poliçe numaranızı paylaşır mısınız? Örneğin, TR-92831."
 
     return None
+
+
+def _forced_structured_call(messages: list) -> Optional[AIMessage]:
+    """Route unambiguous identifier lookups without relying on a small LLM.
+
+    Qwen remains responsible for conversational and ambiguous requests. Exact
+    policy-status questions are deterministic because answering them without
+    consulting the enterprise API would be misleading.
+    """
+    if not messages or not isinstance(messages[-1], HumanMessage):
+        return None
+
+    text = _latest_human_text(messages)
+    normalized = text.lower()
+    claim_match = re.search(r"\bclm-\d+\b", text, re.IGNORECASE)
+    if claim_match is not None and any(
+        phrase in normalized
+        for phrase in ("hasar", "durum", "sorgu", "ne aşamada", "sonuç", "sonuc")
+    ):
+        return AIMessage(
+            content="",
+            tool_calls=[
+                {
+                    "name": "get_claim_status",
+                    "args": {"claim_id": claim_match.group(0).upper()},
+                    "id": f"route-claim-{uuid4().hex}",
+                }
+            ],
+        )
+
+    current_policy_match = re.search(r"\btr-\d+\b", text, re.IGNORECASE)
+    policy_number = (
+        current_policy_match.group(0).upper()
+        if current_policy_match is not None
+        else _latest_human_identifier(messages, r"\btr-\d+\b")
+    )
+
+    coverage_topic = next(
+        (
+            topic
+            for phrases, topic in (
+                (("çekici", "cekici", "towing"), "çekici"),
+                (("cam", "glass"), "cam"),
+                (("hırsızlık", "hirsizlik", "theft"), "hırsızlık"),
+                (("yangın", "yangin", "fire"), "yangın"),
+                (("çarpışma", "carpisma", "collision"), "çarpışma"),
+            )
+            if any(phrase in normalized for phrase in phrases)
+        ),
+        None,
+    )
+    asks_coverage = coverage_topic is not None and any(
+        phrase in normalized
+        for phrase in ("kaps", "teminat", "var mı", "var mi", "dahil", "karşılıyor", "karsiliyor")
+    )
+    if policy_number is not None and coverage_topic is not None and asks_coverage:
+        return AIMessage(
+            content="",
+            tool_calls=[
+                {
+                    "name": "check_policy_coverage",
+                    "args": {"policy_number": policy_number, "topic": coverage_topic},
+                    "id": f"route-coverage-{uuid4().hex}",
+                }
+            ],
+        )
+
+    if current_policy_match is None:
+        return None
+
+    asks_policy_status = any(
+        phrase in normalized
+        for phrase in (
+            "aktif",
+            "durum",
+            "geçerli",
+            "gecerli",
+            "kontrol",
+            "süresi",
+            "suresi",
+            "iptal",
+        )
+    )
+    mentions_coverage = any(
+        phrase in normalized
+        for phrase in (
+            "kapsıyor",
+            "kapsiyor",
+            "teminat",
+            "çekici",
+            "cekici",
+            "ikame",
+        )
+    )
+    asks_claim_creation = "hasar" in normalized and any(
+        phrase in normalized for phrase in ("aç", "ac", "oluştur", "olustur", "kaza")
+    )
+    if not asks_policy_status or mentions_coverage or asks_claim_creation:
+        return None
+
+    return AIMessage(
+        content="",
+        tool_calls=[
+            {
+                "name": "get_policy",
+                "args": {"policy_number": current_policy_match.group(0).upper()},
+                "id": f"route-policy-{uuid4().hex}",
+            }
+        ],
+    )
 
 
 def _named_tools(*names: str) -> list:
@@ -181,13 +302,25 @@ def build_graph(model: BaseChatModel, checkpointer: Optional[BaseCheckpointSaver
             return {
                 "messages": [AIMessage(content=preflight_reply)],
                 "response_mode": "validation",
+                "forced_structured_tool": False,
+            }
+        forced_call = _forced_structured_call(messages)
+        if forced_call is not None:
+            return {
+                "messages": [forced_call],
+                "response_mode": "tool",
+                "forced_structured_tool": True,
             }
         if not messages or not isinstance(messages[0], SystemMessage):
             messages = [SystemMessage(content=SYSTEM_PROMPT), *messages]
         eligible_tools = _tools_for_conversation(messages)
         chat_model = model.bind_tools(eligible_tools) if eligible_tools else model
         response = await chat_model.ainvoke(messages)
-        return {"messages": [response], "response_mode": "llm"}
+        return {
+            "messages": [response],
+            "response_mode": "llm",
+            "forced_structured_tool": False,
+        }
 
     async def tools_node(state: AgentState, config: RunnableConfig) -> dict:
         last = state["messages"][-1]
@@ -253,6 +386,8 @@ def build_graph(model: BaseChatModel, checkpointer: Optional[BaseCheckpointSaver
     def route_after_tools(state: AgentState, config: RunnableConfig) -> str:
         handoff_box = config.get("configurable", {}).get("handoff_box")
         if handoff_box and handoff_box.get("reason") is not None:
+            return END
+        if state.get("forced_structured_tool", False):
             return END
         return "agent"
 

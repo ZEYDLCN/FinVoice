@@ -27,17 +27,7 @@ def test_health():
 
 
 def test_chat_tool_call_then_reply(mock_enterprise):
-    client = _client_with_scripted(
-        [
-            AIMessage(
-                content="",
-                tool_calls=[
-                    {"name": "get_policy", "args": {"policy_number": "TR-92831"}, "id": "c1"}
-                ],
-            ),
-            AIMessage(content="Poliçeniz aktif görünüyor."),
-        ]
-    )
+    client = _client_with_scripted([])
     resp = client.post("/v1/chat", json={"sessionId": "s1", "text": "TR-92831 poliçemi kontrol et"})
     assert resp.status_code == 200
     body = resp.json()
@@ -45,7 +35,7 @@ def test_chat_tool_call_then_reply(mock_enterprise):
         "TR-92831 numaralı poliçeniz aktif. "
         "Geçerlilik tarihi: 2026-01-01 - 2026-12-31."
     )
-    assert body["responseMode"] == "llm"
+    assert body["responseMode"] == "tool"
     assert len(body["toolCalls"]) == 1
     assert body["toolCalls"][0]["name"] == "get_policy"
     assert body["handoff"] is None

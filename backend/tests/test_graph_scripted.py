@@ -9,17 +9,7 @@ from backend.llm.fake import ScriptedChatModel
 
 
 async def test_single_tool_call_then_reply(mock_enterprise):
-    model = ScriptedChatModel(
-        responses=[
-            AIMessage(
-                content="",
-                tool_calls=[
-                    {"name": "get_policy", "args": {"policy_number": "TR-92831"}, "id": "c1"}
-                ],
-            ),
-            AIMessage(content="Poliçeniz aktif görünüyor."),
-        ]
-    )
+    model = ScriptedChatModel(responses=[])
     graph = build_graph(model)
     tool_log: list[dict] = []
     handoff_box: dict = {}
@@ -29,12 +19,88 @@ async def test_single_tool_call_then_reply(mock_enterprise):
         config={"configurable": {"thread_id": "t1", "tool_log": tool_log, "handoff_box": handoff_box}},
     )
 
-    assert result["messages"][-1].content == "Poliçeniz aktif görünüyor."
+    assert result["response_mode"] == "tool"
+    assert "ACTIVE" in result["messages"][-1].content
     assert len(tool_log) == 1
     assert tool_log[0]["name"] == "get_policy"
     assert tool_log[0]["status"] == "success"
     assert tool_log[0]["output"]["status"] == "ACTIVE"
     assert handoff_box == {}
+
+
+async def test_exact_policy_status_is_routed_without_calling_llm(mock_enterprise):
+    model = ScriptedChatModel(responses=[])
+    graph = build_graph(model)
+    tool_log: list[dict] = []
+
+    result = await graph.ainvoke(
+        {"messages": [HumanMessage(content="TR-92831 poliçem aktif mi?")]},
+        config={
+            "configurable": {
+                "thread_id": "policy-status-regression",
+                "tool_log": tool_log,
+                "handoff_box": {},
+            }
+        },
+    )
+
+    assert result["response_mode"] == "tool"
+    assert [entry["name"] for entry in tool_log] == ["get_policy"]
+    assert tool_log[0]["input"] == {"policy_number": "TR-92831"}
+    assert tool_log[0]["output"]["status"] == "ACTIVE"
+
+
+async def test_exact_claim_status_is_routed_without_calling_llm(mock_enterprise):
+    model = ScriptedChatModel(responses=[])
+    graph = build_graph(model)
+    tool_log: list[dict] = []
+
+    result = await graph.ainvoke(
+        {"messages": [HumanMessage(content="CLM-98221 hasar dosyamın durumu nedir?")]},
+        config={
+            "configurable": {
+                "thread_id": "claim-status-regression",
+                "tool_log": tool_log,
+                "handoff_box": {},
+            }
+        },
+    )
+
+    assert result["response_mode"] == "tool"
+    assert [entry["name"] for entry in tool_log] == ["get_claim_status"]
+    assert tool_log[0]["input"] == {"claim_id": "CLM-98221"}
+    assert tool_log[0]["output"]["status"] == "OPEN"
+
+
+async def test_coverage_follow_up_reuses_policy_number_without_calling_llm(mock_enterprise):
+    model = ScriptedChatModel(responses=[])
+    graph = build_graph(model)
+    cfg = {
+        "configurable": {
+            "thread_id": "contextual-coverage",
+            "tool_log": [],
+            "handoff_box": {},
+        }
+    }
+
+    await graph.ainvoke(
+        {"messages": [HumanMessage(content="TR-92831 poliçem aktif mi?")]},
+        config=cfg,
+    )
+    cfg["configurable"]["tool_log"] = []
+    result = await graph.ainvoke(
+        {"messages": [HumanMessage(content="Peki çekici hizmeti var mı?")]},
+        config=cfg,
+    )
+
+    assert result["response_mode"] == "tool"
+    assert [entry["name"] for entry in cfg["configurable"]["tool_log"]] == [
+        "check_policy_coverage"
+    ]
+    assert cfg["configurable"]["tool_log"][0]["input"] == {
+        "policy_number": "TR-92831",
+        "topic": "çekici",
+    }
 
 
 async def test_multi_tool_call_create_claim_flow(mock_enterprise):
